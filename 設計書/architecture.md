@@ -46,7 +46,7 @@ Travel Expense App の全体アーキテクチャを定義する。
   - AWS Lambda（コンテナ or zip デプロイ）
   - API Gateway HTTP API からの呼び出し
 - 主な責務：
-  - `api.md` で定義した REST API を提供
+  - `backend.md` で定義した REST API を提供
   - DynamoDB とのデータ入出力
   - 将来的な認証（Cognito JWT）の検証（現時点では MVP のため未実装）
 - エンドポイント例：
@@ -123,8 +123,8 @@ Travel Expense App の全体アーキテクチャを定義する。
   - 実際に友達に使ってもらう「本番環境」。
 - 特徴：
   - Route 53 で取得済みドメイン（例：`daisuke-selfstudy.com`）のサブドメインを利用する想定：
-    - 例：`app.daisuke-selfstudy.com`（フロント）
-    - `api.daisuke-selfstudy.com`（API）
+    - 例：`travel.daisuke-selfstudy.com`（フロント）
+    - `travel-api.daisuke-selfstudy.com`（API）
   - CloudFront + ACM（証明書）による HTTPS 対応。
   - dev 環境とは別のステージ／リソース名を使用する。
 

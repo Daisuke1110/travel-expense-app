@@ -12,8 +12,8 @@ Travel Expense App の MVP 版における要件をまとめる。
 
 - `product.md`
 - `data-model.md`
-- `api.md`
-- `frontend-spec.md`
+- `backend.md`
+- `frontend.md`
 
 ここでは概要のみ記載する。
 
@@ -160,7 +160,7 @@ Travel Expense App の MVP 版における要件をまとめる。
 
 ## 3. まとめ
 
-- 機能要件は別ドキュメント（product/api/frontend-spec）で詳細定義済み。
+- 機能要件は別ドキュメント（product/api/frontend）で詳細定義済み。
 - 本ドキュメントでは、特に以下の非機能要件を明確化した：
   - パフォーマンス
   - セキュリティ
