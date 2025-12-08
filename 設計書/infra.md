@@ -120,3 +120,4 @@ infra/
 # 9. MVP と将来拡張
 - MVP: S3, CloudFront, API Gateway HTTP API, Lambda, DynamoDB, Route 53
 - 将来: Cognito, CloudWatch Alarms+SNS, WAF, CI/CD など
+- DynamoDB のバックアップ/PITR は dev/prod で段階的に導入予定。prod は削除ガード（手動確認フローやタグ運用）を検討。

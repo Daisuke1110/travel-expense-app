@@ -54,9 +54,10 @@
 | created_at   | String | 作成日時(ISO8601)                            |
 
 ### 備考
+- MVP では `base_currency` は作成後は変更不可（変更要求は 400 を返す）。レートは更新可。
 - `owner_id` と `created_at` をキーにした GSI (GSI1) はパフォーマンス要件を見て追加検討。MVP では作成しない想定。
 - 当面はトリップごとに 1 つの基準通貨 (`base_currency`) を想定。通常は `Expenses.currency` と同一。
-- オーナーは `base_currency` と `rate_to_jpy` を変更可能。過去の支出はそのまま保持し、表示時に最新レートで換算する。
+- レート（`rate_to_jpy`）は更新可能だが、`base_currency` は MVP では不変。過去の支出はそのまま保持し、表示時に最新レートで換算する。
 - 将来、同一トリップ内で複数通貨の支出を扱う場合は、支出ごとに「その時点のレート」や `yen_amount` を保存する設計を検討する。
 
 ---
@@ -116,6 +117,7 @@
 - `TripMembers` に参加していないユーザーは支出の登録・閲覧・削除ができないようにする。
 - レート変更時も `amount` は更新しない。表示時に最新の `Trips.rate_to_jpy` を用いて換算する。
 - `expense_id` はクライアント向け ID として保持し、必要なら GSI1 で単体取得できるようにする。
+- DynamoDB は PK/SK を直接更新できないため、`datetime` を変更する PATCH は「GSI1 で対象取得 → 新しい `datetime_expense_id` を計算 → 新レコード Put → 旧レコード Delete」の再書き込みフローを取る。
 
 ## レビュー反映メモ
 - Expenses は SK=`datetime_expense_id`（`datetime#expense_id`）で重複を防ぎ、GSI1 (PK=`expense_id`) を作成する前提に変更。

@@ -77,7 +77,7 @@ Travel Expense App の全体アーキテクチャを定義する。
 
 # 5. セキュリティ・ネットワーク設計
 - Lambda は VPC 外（パブリックエンドポイント、シンプルさ優先）
-- HTTPS 終端: API Gateway（Regional）で実施。CloudFront はフロント配信のみで利用。
+- HTTPS 終端: API Gateway（Regional）で実施。CloudFront はフロント配信のみで利用（API を CloudFront 経由にしない理由: 遅延よりシンプルさを優先）。
 - CORS: API Gateway で許可ドメインを設定
   - AllowedOrigins: https://travel-dev.daisuke-selfstudy.com, https://travel.daisuke-selfstudy.com, http://localhost:5173（ローカル開発用）
   - AllowedMethods: GET, POST, PATCH, DELETE
