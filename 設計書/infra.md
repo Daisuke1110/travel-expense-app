@@ -40,6 +40,7 @@ Travel Expense App のインフラ構成を定義する。Terraform で構築す
 - API Gateway HTTP API（Regional、HTTPS 終端）
 - Lambda（FastAPI 実行）
 - DynamoDB（Users/Trips/TripMembers/Expenses）
+  - GSI: TripMembers GSI1 (PK=trip_id, SK=user_id)、Expenses GSI1 (PK=expense_id) を MVP から作成
 - CORS 設定（API Gateway）
   - AllowedOrigins: https://travel-dev.daisuke-selfstudy.com, https://travel.daisuke-selfstudy.com, http://localhost:5173
   - AllowedMethods: GET, POST, PATCH, DELETE

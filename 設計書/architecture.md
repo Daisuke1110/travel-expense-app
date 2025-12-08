@@ -31,6 +31,9 @@ Travel Expense App の全体アーキテクチャを定義する。
 ## 2.3 データストア（DynamoDB）
 - テーブル: Users, Trips, TripMembers, Expenses
 - 詳細は data-model.md 参照
+- MVP から作成する GSI:
+  - TripMembers GSI1 (PK=trip_id, SK=user_id) — メンバー一覧・権限チェック用
+  - Expenses GSI1 (PK=expense_id) — 支出の編集/削除用
 - リージョン: ap-northeast-3（単一リージョン運用）
 
 ## 2.4 インフラ（AWS）

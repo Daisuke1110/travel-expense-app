@@ -121,3 +121,7 @@
 - Expenses は SK=`datetime_expense_id`（`datetime#expense_id`）で重複を防ぎ、GSI1 (PK=`expense_id`) を作成する前提に変更。
 - TripMembers はメンバー一覧取得用に GSI1 (PK=`trip_id`, SK=`user_id`) を用意する前提。
 - MVP では Users.name はローカル DB に手動登録し、X-Debug-User-Id と紐づけて owner_name を返す。欠損時は `"owner"` をフォールバック表示。
+- MVP で作成する GSI:
+  - TripMembers: GSI1 (PK=`trip_id`, SK=`user_id`) — 共有トリップのメンバー一覧取得・権限チェックに利用
+  - Expenses: GSI1 (PK=`expense_id`) — 編集/削除時の一意取得に利用
+- Expenses.currency は Trips.base_currency と同一にする（MVP）。複数通貨対応は将来拡張で検討する。
