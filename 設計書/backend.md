@@ -1,12 +1,11 @@
-# API 設計（v1 / MVP）
+﻿# API 設計（v1 / MVP）
 
-本ドキュメントは、Travel Expense App のバックエンド API 仕様を定義する。
+本ドキュメントは Travel Expense App のバックエンド API 仕様を定義する。
 
-- バックエンド: FastAPI（Python）
+- バックエンド: FastAPI + Python
 - デプロイ: AWS Lambda + API Gateway HTTP API
 - データストア: DynamoDB
-
-MVP のため、一部機能は簡易実装とする。
+- MVP のため、一部機能は簡易実装とする
 
 ---
 
@@ -14,18 +13,17 @@ MVP のため、一部機能は簡易実装とする。
 
 ## 基本仕様
 
-- **Base URL（本番）**: `https://travel.daisuke-selfstudy.com/`
-- 開発環境は別ドメインを利用する（例: `https://travel-dev.daisuke-selfstudy.com/`）。
-- リクエスト / レスポンス形式: JSON
+- **Base URL（本番案）**: `https://travel-api.daisuke-selfstudy.com/`
+- 開発環境は別ドメインを利用（例: `https://travel-api-dev.daisuke-selfstudy.com/`）
+- リクエスト/レスポンス形式: JSON
 - 日時形式: ISO8601 (`2026-05-01T12:34:56Z`)
-- ID の形式: UUID もしくは `"trip-xxx"`, `"exp-xxx"` のようなプレフィックス付き文字列を使用  
-  （MVP では Python の UUID 標準ライブラリを利用）
+- ID 形式: UUID もしくは `"trip-xxx"`, `"exp-xxx"` のようなプレフィックス付き文字列
 
-## 認証（MVP → 将来）
+## 認証（MVP ↔ 将来）
 
-### MVP（認証なし）
+### MVP: 認証なし
 
-- Cognito が未導入のため、一時的にヘッダから user_id を受け取る簡易実装とする。
+- Cognito 未導入のため、一時的にヘッダから user_id を受け取る簡易実装とする
 
 例:
 
@@ -33,12 +31,12 @@ MVP のため、一部機能は簡易実装とする。
 X-Debug-User-Id: user-123
 ```
 
-※ 本番では削除する。
+※ 本番では削除する
 
-### 将来（正式認証）
+### 将来: 正式認証
 
-- Cognito User Pool を利用し、JWT 内の `sub` を user_id として扱う。
-- API Gateway の JWT 検証 → Lambda への `user_id` の委譲を行う。
+- Cognito User Pool + JWT 検証を追加し、`sub` を `user_id` として扱う
+- API Gateway で JWT 検証を行い、Lambda に `user_id` を委譲
 
 ---
 
@@ -48,7 +46,7 @@ X-Debug-User-Id: user-123
 
 ログインユーザーが参加しているトリップ一覧を取得する。
 
-返却形式は：
+返却形式:
 
 - `own_trips`: 自分がオーナーのトリップ
 - `shared_trips`: メンバーとして参加している共有トリップ
@@ -63,13 +61,14 @@ X-Debug-User-Id: user-123
       "title": "2026 バンコク",
       "country": "TH",
       "start_date": "2026-05-01",
-      "end_date": "2026-05-05"
+      "end_date": "2026-05-05",
+      "owner_name": "あなた"
     }
   ],
   "shared_trips": [
     {
       "trip_id": "trip-999",
-      "title": "2026 ソウル旅行",
+      "title": "2026 ソウル旅",
       "country": "KR",
       "start_date": "2026-06-10",
       "end_date": "2026-06-13",
@@ -81,24 +80,24 @@ X-Debug-User-Id: user-123
 
 ### 詳細仕様
 
-- `TripMembers` を `user_id` で Query する。
-- 得られた `trip_id` を元に `Trips` を取得する。
-- `role === "owner"` → `own_trips`  
-  `role === "member"` → `shared_trips`
-- `owner_name` は次のいずれかで取得する：
-  - `Trips.owner_id` を利用して `Users.name` を参照
-  - （MVP 簡易）固定値や `"owner"` でもよい
+- `TripMembers` を `user_id` で Query する
+- 得られた `trip_id` を元に `Trips` を取得する
+- `role === "owner"` → `own_trips` / `role === "member"` → `shared_trips`
+- `owner_name` は `Trips.owner_id` を利用して `Users.name` を参照し、該当がない場合は `"owner"` を返す
+- `TripMembers` に存在しない `trip_id` は返さず、未参加トリップを閲覧できないようにする（MVP から 403 を返す）
 
 ### エラー
 
-| ステータス | 意味                         |
-| ---------- | ---------------------------- |
-| 401        | 将来：未ログイン（JWT 無効） |
-| 500        | DynamoDB エラー              |
+### エラー
+
+| ステータス | 意味                        |
+| ---------- | --------------------------- |
+| 401        | 将来: 未ログイン / JWT 無効 |
+| 500        | DynamoDB エラー             |
 
 ### ページング
 
-- トリップ数は少ない想定のため、MVP ではページング不要とする。
+- トリップ数は少ない想定のため、MVP ではペジング不要
 
 ---
 
@@ -112,7 +111,7 @@ X-Debug-User-Id: user-123
 
 ```json
 {
-  "title": "2026 バンコク旅行",
+  "title": "2026 バンコク旅",
   "country": "TH",
   "start_date": "2026-05-01",
   "end_date": "2026-05-05",
@@ -126,21 +125,22 @@ X-Debug-User-Id: user-123
 ```json
 {
   "trip_id": "trip-123",
-  "title": "2026 バンコク旅行",
+  "title": "2026 バンコク旅",
   "country": "TH",
   "start_date": "2026-05-01",
   "end_date": "2026-05-05",
   "base_currency": "THB",
   "rate_to_jpy": 4.2,
-  "owner_id": "user-abc"
+  "owner_id": "user-abc",
+  "owner_name": "あなた"
 }
 ```
 
 ### サーバー処理フロー
 
-1. UUID を生成し `trip_id` とする。
-2. `Trips` にレコードを追加する。
-3. `TripMembers` に以下のレコードを追加する：
+1. UUID を生成し `trip_id` とする
+2. `Trips` にレコードを追加
+3. `TripMembers` に以下を追加
 
 ```json
 {
@@ -150,6 +150,8 @@ X-Debug-User-Id: user-123
   "joined_at": "<ISO8601>"
 }
 ```
+
+### エラー
 
 ### エラー
 
@@ -177,25 +179,77 @@ X-Debug-User-Id: user-123
   "end_date": "2026-05-05",
   "base_currency": "THB",
   "rate_to_jpy": 4.2,
-  "owner_id": "user-abc"
+  "owner_id": "user-abc",
+  "owner_name": "友達A"
 }
 ```
 
 ### エラー
 
-| ステータス  | 意味                         |
-| ----------- | ---------------------------- |
-| 404         | トリップが存在しない         |
-| 403（将来） | このトリップを見る権限がない |
+### エラー
+
+| ステータス  | 意味                                                    |
+| ----------- | ------------------------------------------------------- |
+| 404         | トリップが存在しない                                    |
+| 403         | このトリップを見る権限がない（TripMembers に無い user） |
 
 ---
 
-# 4. トリップメンバー追加（将来機能）
+# 4. トリップレート更新
+
+## `PATCH /trips/{tripId}`
+
+基準通貨（`base_currency`）とレート（`rate_to_jpy`）を更新する。オーナーのみ実行可能。
+
+### リクエスト例
+
+```json
+{
+  "base_currency": "THB",
+  "rate_to_jpy": 4.2
+}
+```
+
+### レスポンス例
+
+```json
+{
+  "trip_id": "trip-123",
+  "title": "2026 バンコク旅行",
+  "country": "TH",
+  "start_date": "2026-05-01",
+  "end_date": "2026-05-05",
+  "base_currency": "THB",
+  "rate_to_jpy": 4.2,
+  "owner_id": "user-abc",
+  "owner_name": "あなた"
+}
+```
+
+### サーバー処理フロー
+
+1. `TripMembers` で `role = "owner"` を確認し、オーナー以外は 403 を返す
+2. `Trips` の `base_currency` / `rate_to_jpy` を Update する
+3. 過去の支出は再計算しない（表示時に最新の `rate_to_jpy` で換算）
+
+### エラー
+
+### エラー
+
+| ステータス  | 意味                     |
+| ----------- | ------------------------ |
+| 404         | トリップが存在しない     |
+| 403         | オーナー以外の更新       |
+| 400         | 入力バリデーションエラー |
+| 500         | DynamoDB 更新エラー      |
+
+---
+
+# 5. トリップメンバー追加（将来機能）
 
 ## `POST /trips/{tripId}/members`
 
-共有トリップへ新しいメンバーを追加する機能。  
-MVP では実装しないが、将来のため仕様を残しておく。
+共有トリップへ新しいメンバーを追加する機能。MVP では実装しないが、将来のため仕様を残しておく。
 
 ### リクエスト例
 
@@ -208,7 +262,7 @@ MVP では実装しないが、将来のため仕様を残しておく。
 
 ---
 
-# 5. 支出一覧取得
+# 6. 支出一覧取得
 
 ## `GET /trips/{tripId}/expenses`
 
@@ -228,6 +282,7 @@ MVP では実装しないが、将来のため仕様を残しておく。
       "category": "food",
       "note": "屋台ラーメン",
       "datetime": "2026-05-01T12:00:00Z",
+      "datetime_expense_id": "2026-05-01T12:00:00Z#exp-1",
       "created_at": "2026-05-01T12:05:00Z"
     }
   ]
@@ -236,11 +291,15 @@ MVP では実装しないが、将来のため仕様を残しておく。
 
 ### 詳細仕様
 
-- DynamoDB `Expenses` を PK=`trip_id` で Query する。
-- 日本円換算額は以下の方針とする：
-  - **MVP**：フロント側で `amount * rate_to_jpy` を計算する。
-  - **将来**：バックエンドで `yen_amount` を計算して返す。
-
+- DynamoDB `Expenses` を PK=`trip_id` で Query する
+- SK は `datetime_expense_id = "<datetime>#<expense_id>"` として保存し、同一日時の重複を防ぎ、編集/削除時に一意に特定する
+- Expenses.currency は MVP では Trips.base_currency に固定（異通貨入力は不可）
+- 金額は通貨の最小単位の整数（小数は切り捨て）
+- 日時は ISO8601 UTC で扱う（保存は UTC 固定、表示時にローカライズ）
+- 日本円換算額は以下の方針とする
+  - **MVP**: フロントで `amount * rate_to_jpy` を計算する
+  - **将来**: バックエンドで `yen_amount` を計算して返す
+- `user_id` が `TripMembers` にない場合は 403 を返し、参加していないトリップの支出は閲覧できないようにする
 ### エラー
 
 | ステータス | 意味                  |
@@ -250,7 +309,7 @@ MVP では実装しないが、将来のため仕様を残しておく。
 
 ---
 
-# 6. 支出追加
+# 7. 支出追加
 
 ## `POST /trips/{tripId}/expenses`
 
@@ -264,7 +323,7 @@ MVP では実装しないが、将来のため仕様を残しておく。
   "currency": "THB",
   "category": "food",
   "note": "屋台ラーメン",
-  "datetime": "2026-05-01T12:00:00Z"
+  "datetime": "2026-05-01T12:00:00Z" // SK として保存
 }
 ```
 
@@ -280,27 +339,33 @@ MVP では実装しないが、将来のため仕様を残しておく。
   "category": "food",
   "note": "屋台ラーメン",
   "datetime": "2026-05-01T12:00:00Z",
+  "datetime_expense_id": "2026-05-01T12:00:00Z#exp-1",
   "created_at": "2026-05-01T12:05:00Z"
 }
 ```
 
 ### サーバー処理フロー
 
-1. UUID を生成し `expense_id` を作成する。
-2. `user_id` はヘッダ（MVP）または Cognito から取得する。
-3. DynamoDB `Expenses` に Put する。
+1. UUID を生成し `expense_id` を作成する
+2. `user_id` はヘッダ（MVP）または Cognito から取得する
+3. `datetime_expense_id = "<datetime>#<expense_id>"` を組み立て、DynamoDB `Expenses` に Put する
+4. `TripMembers` に存在するユーザーのみ追加可能（メンバー/オーナーは追加可）
 
-###エラー
+- `amount` は通貨の最小単位の整数で受け付ける（小数なし）
+
+### エラー
+
+### エラー
 
 | ステータス | 意味                       |
 | ---------- | -------------------------- |
 | 404        | トリップが存在しない       |
-| 400        | 入力のバリデーションエラー |
+| 400        | 入力・バリデーションエラー |
 | 500        | DynamoDB 書き込みエラー    |
 
 ---
 
-# 7. 支出削除
+# 8. 支出削除
 
 ## `DELETE /trips/{tripId}/expenses/{expenseId}`
 
@@ -312,33 +377,68 @@ MVP では実装しないが、将来のため仕様を残しておく。
 
 ### エラー
 
-| ステータス  | 意味             |
-| ----------- | ---------------- |
-| 404         | 支出が存在しない |
-| 403（将来） | 削除権限なし     |
+### エラー
+
+| ステータス  | 意味                                    |
+| ----------- | --------------------------------------- |
+| 404         | 支出が存在しない                        |
+| 403         | 削除権限なし（TripMembers にない user） |
+
+### 権限
+
+- `TripMembers` に存在するユーザー（メンバー/オーナー）のみ削除可能
+- GSI1 (PK=`expense_id`) から対象を特定し、`trip_id` + `datetime_expense_id` で削除
 
 ---
 
-# 8. 将来拡張 API（メモ）
+# 9. 支出編集
 
-これらは MVP 以降に実装予定。
+## `PATCH /trips/{tripId}/expenses/{expenseId}`
 
-## レシート画像 → OCR
+指定した支出を更新する（amount/category/note/datetime）。
 
-```text
+### サーバー処理フロー
+
+1. GSI1 で `expense_id` を引き当て、`trip_id` と `datetime_expense_id` を取得する
+2. `TripMembers` に存在するユーザーかを確認し、参加者以外なら 403
+3. 更新後の `datetime` が変わる場合は新しい `datetime_expense_id` を計算する（`<datetime>#<expense_id>`）
+4. DynamoDB の該当アイテムを Update する
+
+### エラー
+
+| ステータス  | 意味                                    |
+| ----------- | --------------------------------------- |
+| 404         | 支出が存在しない                        |
+| 403         | 更新権限なし（TripMembers にない user） |
+| 400         | 入力バリデーションエラー                |
+| 500         | DynamoDB 更新エラー                     |
+
+---
+
+# 10. 将来拡張 API（メモ）
+
+MVP 以降に実装予定。
+
+## レシート画像 ↔OCR
+
+```
 POST /trips/{tripId}/receipts
 ```
 
 ## 為替レート取得
 
-```text
+```
 GET /rates?base=THB&target=JPY
 ```
 
 ---
 
-# 9. 設計方針メモ
+# 10. 設計方針メモ
 
-- GSI は MVP では作成しない。必要に応じて追加する。
-- API はできる限り単純な CRUD とし、複雑な計算は基本的にクライアント側で行う。
-- 認証は MVP では簡易版とし、将来的に Cognito に置き換える。
+- GSI は MVP では作成しない。負荷に応じて追加
+- API は単純な CRUD とし、複雑な計算は基本的にクライアント側で行う
+- 認証は MVP では簡易版とし、将来 Cognito に置き換える
+
+
+
+
