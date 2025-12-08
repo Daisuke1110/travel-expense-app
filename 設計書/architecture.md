@@ -35,6 +35,7 @@ Travel Expense App の全体アーキテクチャを定義する。
   - TripMembers GSI1 (PK=trip_id, SK=user_id) — メンバー一覧・権限チェック用
   - Expenses GSI1 (PK=expense_id) — 支出の編集/削除用
 - リージョン: ap-northeast-3（単一リージョン運用）
+- キャパシティ: MVP は on-demand。prod は PITR を有効化し、dev は必要に応じて無効化可（コスト優先）。
 
 ## 2.4 インフラ（AWS）
 - API Gateway HTTP API（Regional、HTTPS 終端）

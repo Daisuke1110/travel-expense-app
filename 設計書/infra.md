@@ -41,6 +41,8 @@ Travel Expense App のインフラ構成を定義する。Terraform で構築す
 - Lambda（FastAPI 実行）
 - DynamoDB（Users/Trips/TripMembers/Expenses）
   - GSI: TripMembers GSI1 (PK=trip_id, SK=user_id)、Expenses GSI1 (PK=expense_id) を MVP から作成
+  - キャパシティ: MVP は on-demand（必要に応じて provisioned + アラームに移行）
+  - バックアップ: prod は PITR 有効、dev は不要なら無効でも可（コスト優先）
 - CORS 設定（API Gateway）
   - AllowedOrigins: https://travel-dev.daisuke-selfstudy.com, https://travel.daisuke-selfstudy.com, http://localhost:5173
   - AllowedMethods: GET, POST, PATCH, DELETE
@@ -105,6 +107,7 @@ infra/
 - Lambda 実行ロール: DynamoDB への最小権限、CloudWatch Logs 書き込み
 - S3 バケット: パブリックブロック有効、OAC/OAI 経由のみ読み取り
 - API セキュリティ: CORS をフロントドメインに限定、HTTPS のみ許可
+- CloudWatch Logs: Lambda ログの保持期間を設定（例: dev 14 日 / prod 30 日）。最低限の 5xx/エラーレートアラートは将来導入を想定。
 
 ---
 
