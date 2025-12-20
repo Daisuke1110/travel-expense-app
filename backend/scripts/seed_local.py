@@ -8,6 +8,7 @@ Environment:
     AWS_REGION (default: ap-northeast-1)
     TRIPS_TABLE, TRIP_MEMBERS_TABLE, EXPENSES_TABLE, USERS_TABLE (optional overrides)
 """
+
 import os
 import time
 from datetime import datetime, timezone
@@ -42,11 +43,15 @@ def ensure_tables(dynamodb):
     specs = {
         names["users"]: {
             "KeySchema": [{"AttributeName": "user_id", "KeyType": "HASH"}],
-            "AttributeDefinitions": [{"AttributeName": "user_id", "AttributeType": "S"}],
+            "AttributeDefinitions": [
+                {"AttributeName": "user_id", "AttributeType": "S"}
+            ],
         },
         names["trips"]: {
             "KeySchema": [{"AttributeName": "trip_id", "KeyType": "HASH"}],
-            "AttributeDefinitions": [{"AttributeName": "trip_id", "AttributeType": "S"}],
+            "AttributeDefinitions": [
+                {"AttributeName": "trip_id", "AttributeType": "S"}
+            ],
         },
         names["trip_members"]: {
             "KeySchema": [
@@ -118,8 +123,24 @@ def seed_data(dynamodb):
     now = datetime.now(timezone.utc).isoformat()
 
     users = [
-        {"user_id": "user-123", "name": "あなた", "email": "you@example.com", "created_at": now},
-        {"user_id": "user-456", "name": "友達A", "email": "friend@example.com", "created_at": now},
+        {
+            "user_id": "user-123",
+            "name": "松田",
+            "email": "you@example.com",
+            "created_at": now,
+        },
+        {
+            "user_id": "user-456",
+            "name": "柳生",
+            "email": "friend@example.com",
+            "created_at": now,
+        },
+        {
+            "user_id": "user-999",
+            "name": "井上",
+            "email": "friend@example.com",
+            "created_at": now,
+        },
     ]
     trips = [
         {
@@ -146,10 +167,36 @@ def seed_data(dynamodb):
         },
     ]
     trip_members = [
-        {"user_id": "user-123", "trip_id": "trip-123", "role": "owner", "joined_at": now},
-        {"user_id": "user-456", "trip_id": "trip-123", "role": "member", "joined_at": now},
-        {"user_id": "user-456", "trip_id": "trip-999", "role": "owner", "joined_at": now},
-        {"user_id": "user-123", "trip_id": "trip-999", "role": "member", "joined_at": now},
+        {
+            "user_id": "user-123",
+            "trip_id": "trip-123",
+            "role": "owner",
+            "joined_at": now,
+        },
+        {
+            "user_id": "user-456",
+            "trip_id": "trip-123",
+            "role": "member",
+            "joined_at": now,
+        },
+        {
+            "user_id": "user-456",
+            "trip_id": "trip-999",
+            "role": "owner",
+            "joined_at": now,
+        },
+        {
+            "user_id": "user-123",
+            "trip_id": "trip-999",
+            "role": "member",
+            "joined_at": now,
+        },
+        {
+            "user_id": "user-999",
+            "trip_id": "trip-999",
+            "role": "member",
+            "joined_at": now,
+        },
     ]
     expenses = [
         {

@@ -2,8 +2,10 @@
 
 from boto3.dynamodb.conditions import Key
 from botocore.exceptions import BotoCoreError, ClientError
-from fastapi import APIRouter, Header, HTTPException
+from decimal import Decimal
+from fastapi import APIRouter, Header, HTTPException, Path
 from pydantic import BaseModel, Field
+from typing import Optional
 
 from app.db import get_dynamodb_resource, get_table_names
 
@@ -22,6 +24,35 @@ class TripSummary(BaseModel):
 class TripsResponse(BaseModel):
     own_trips: List[TripSummary]
     shared_trips: List[TripSummary]
+
+
+class TripDetail(BaseModel):
+    trip_id: str
+    title: str
+    country: str
+    start_date: str
+    end_date: str
+    base_currency: str
+    rate_to_jpy: float
+    owner_id: Optional[str] = None
+    owner_name: Optional[str] = None
+
+
+class ExpenseItem(BaseModel):
+    expense_id: str
+    trip_id: str
+    user_id: str
+    amount: int
+    currency: str
+    category: Optional[str] = None
+    note: Optional[str] = None
+    datetime: str
+    datetime_expense_id: str
+    created_at: Optional[str] = None
+
+
+class ExpensesResponse(BaseModel):
+    expenses: List[ExpenseItem]
 
 
 def _get_user_id(x_debug_user_id: str | None) -> str:
@@ -168,3 +199,147 @@ def _batch_get_items(
             request = {"RequestItems": {table_name: {"Keys": unprocessed or []}}}
 
     return results
+
+
+def _get_trip_or_404(dynamodb, table_name: str, trip_id: str) -> dict:
+    response = dynamodb.Table(table_name).get_item(Key={"trip_id": trip_id})
+    item = response.get("Item")
+    if not item:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    return item
+
+
+def _ensure_member_or_forbid(
+    dynamodb, table_name: str, user_id: str, trip_id: str
+) -> dict:
+    """
+    Ensure the user is a member of the trip (TripMembers PK=user_id, SK=trip_id).
+    """
+    response = dynamodb.Table(table_name).get_item(
+        Key={"user_id": user_id, "trip_id": trip_id}
+    )
+    item = response.get("Item")
+    if not item:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return item
+
+
+def _get_owner_name(
+    dynamodb, users_table: str, owner_id: Optional[str]
+) -> Optional[str]:
+    if not owner_id:
+        return None
+    response = dynamodb.Table(users_table).get_item(Key={"user_id": owner_id})
+    item = response.get("Item") or {}
+    return item.get("name", "owner")
+
+
+def _as_float(value):
+    if isinstance(value, Decimal):
+        return float(value)
+    return value
+
+
+def _as_int(value):
+    if isinstance(value, Decimal):
+        return int(value)
+    return int(value) if value is not None else value
+
+
+@router.get("/trips/{trip_id}", response_model=TripDetail)
+def get_trip_detail(
+    trip_id: str = Path(..., description="Trip ID"),
+    x_debug_user_id: str | None = Header(default=None),
+):
+    """
+    Get trip detail. Only members of the trip can view.
+    """
+    user_id = _get_user_id(x_debug_user_id)
+    tables = get_table_names()
+    dynamodb = get_dynamodb_resource()
+
+    try:
+        trip = _get_trip_or_404(dynamodb, tables["trips"], trip_id)
+        _ensure_member_or_forbid(dynamodb, tables["trip_members"], user_id, trip_id)
+        owner_name = _get_owner_name(dynamodb, tables["users"], trip.get("owner_id"))
+
+        return TripDetail(
+            trip_id=trip.get("trip_id", ""),
+            title=trip.get("title", ""),
+            country=trip.get("country", ""),
+            start_date=trip.get("start_date", ""),
+            end_date=trip.get("end_date", ""),
+            base_currency=trip.get("base_currency", ""),
+            rate_to_jpy=_as_float(trip.get("rate_to_jpy", 0.0)),
+            owner_id=trip.get("owner_id"),
+            owner_name=owner_name or "owner",
+        )
+    except HTTPException:
+        raise
+    except (ClientError, BotoCoreError) as exc:
+        raise HTTPException(status_code=500, detail="Failed to fetch trip") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Unexpected error") from exc
+
+
+@router.get("/trips/{trip_id}/expenses", response_model=ExpensesResponse)
+def list_expenses(
+    trip_id: str = Path(..., description="Trip ID"),
+    x_debug_user_id: str | None = Header(default=None),
+):
+    """
+    List expenses for a trip. Only members can view.
+    """
+    user_id = _get_user_id(x_debug_user_id)
+    tables = get_table_names()
+    dynamodb = get_dynamodb_resource()
+
+    try:
+        _get_trip_or_404(dynamodb, tables["trips"], trip_id)
+        _ensure_member_or_forbid(dynamodb, tables["trip_members"], user_id, trip_id)
+    except HTTPException:
+        raise
+    except (ClientError, BotoCoreError) as exc:
+        raise HTTPException(status_code=500, detail="Failed to fetch trip") from exc
+
+    try:
+        table = dynamodb.Table(tables["expenses"])
+        items: List[dict] = []
+        last_evaluated_key = None
+        while True:
+            params = {
+                "KeyConditionExpression": Key("trip_id").eq(trip_id),
+                "ScanIndexForward": True,
+            }
+            if last_evaluated_key:
+                params["ExclusiveStartKey"] = last_evaluated_key
+            resp = table.query(**params)
+            items.extend(resp.get("Items", []))
+            last_evaluated_key = resp.get("LastEvaluatedKey")
+            if not last_evaluated_key:
+                break
+
+        expenses: List[ExpenseItem] = []
+        for item in items:
+            expenses.append(
+                ExpenseItem(
+                    expense_id=item.get("expense_id", ""),
+                    trip_id=item.get("trip_id", ""),
+                    user_id=item.get("user_id", ""),
+                    amount=_as_int(item.get("amount", 0)),
+                    currency=item.get("currency", ""),
+                    category=item.get("category"),
+                    note=item.get("note"),
+                    datetime=item.get("datetime", ""),
+                    datetime_expense_id=item.get("datetime_expense_id", ""),
+                    created_at=item.get("created_at"),
+                )
+            )
+
+        return ExpensesResponse(expenses=expenses)
+    except HTTPException:
+        raise
+    except (ClientError, BotoCoreError) as exc:
+        raise HTTPException(status_code=500, detail="Failed to fetch expenses") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Unexpected error") from exc
