@@ -2,16 +2,20 @@
 
 from boto3.dynamodb.conditions import Key
 from botocore.exceptions import BotoCoreError, ClientError
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from fastapi import APIRouter, Header, HTTPException, Path
 from pydantic import BaseModel, Field
 from typing import Optional
+from datetime import date, datetime, timezone
+import uuid
+import re
 
 from app.db import get_dynamodb_resource, get_table_names
 
 router = APIRouter()
 
 
+# クラス一覧
 class TripSummary(BaseModel):
     trip_id: str = Field(..., example="trip-123")
     title: str = Field(..., example="2026 バンコク")
@@ -55,6 +59,19 @@ class ExpensesResponse(BaseModel):
     expenses: List[ExpenseItem]
 
 
+class TripCreateRequest(BaseModel):
+    title: str
+    country: str
+    start_date: str
+    end_date: str
+    base_currency: str
+    rate_to_jpy: float | int | str
+
+
+_CURRENCY_RE = re.compile(r"^[A-Z]{3}$")
+
+
+## 関数一覧
 def _get_user_id(x_debug_user_id: str | None) -> str:
     if not x_debug_user_id:
         raise HTTPException(
@@ -63,6 +80,135 @@ def _get_user_id(x_debug_user_id: str | None) -> str:
     return x_debug_user_id
 
 
+def _batch_get_items(
+    dynamodb, table_name: str, ids: List[str], key_name: str
+) -> List[dict]:
+    if not ids:
+        return []
+
+    client = dynamodb.meta.client
+    results: List[dict] = []
+
+    def _chunks(seq: List[str], size: int = 100):
+        for i in range(0, len(seq), size):
+            yield seq[i : i + size]
+
+    for chunk in _chunks(ids):
+        request = {
+            "RequestItems": {
+                table_name: {"Keys": [{key_name: item_id} for item_id in chunk]}
+            }
+        }
+        while request["RequestItems"].get(table_name, {}).get("Keys"):
+            response = client.batch_get_item(**request)
+            results.extend(response.get("Responses", {}).get(table_name, []))
+            unprocessed = (
+                response.get("UnprocessedKeys", {}).get(table_name, {}).get("Keys")
+            )
+            request = {"RequestItems": {table_name: {"Keys": unprocessed or []}}}
+
+    return results
+
+
+def _get_trip_or_404(dynamodb, table_name: str, trip_id: str) -> dict:
+    response = dynamodb.Table(table_name).get_item(Key={"trip_id": trip_id})
+    item = response.get("Item")
+    if not item:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    return item
+
+
+def _ensure_member_or_forbid(
+    dynamodb, table_name: str, user_id: str, trip_id: str
+) -> dict:
+    """
+    Ensure the user is a member of the trip (TripMembers PK=user_id, SK=trip_id).
+    """
+    response = dynamodb.Table(table_name).get_item(
+        Key={"user_id": user_id, "trip_id": trip_id}
+    )
+    item = response.get("Item")
+    if not item:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return item
+
+
+def _ensure_member(dynamodb, table_name: str, user_id: str, trip_id: str):
+    res = dynamodb.Table(table_name).get_item(
+        Key={"user_id": user_id, "trip_id": trip_id}
+    )
+    if "Item" not in res:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return res["Item"]
+
+
+def _ensure_owner(dynamodb, table_name: str, user_id: str, trip_id: str):
+    item = _ensure_member(dynamodb, table_name, user_id, trip_id)
+    if item.get("role") != "owner":
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return item
+
+
+def _get_owner_name(
+    dynamodb, users_table: str, owner_id: Optional[str]
+) -> Optional[str]:
+    if not owner_id:
+        return None
+    response = dynamodb.Table(users_table).get_item(Key={"user_id": owner_id})
+    item = response.get("Item") or {}
+    return item.get("name", "owner")
+
+
+def _as_float(value):
+    if isinstance(value, Decimal):
+        return float(value)
+    return value
+
+
+def _as_int(value):
+    if isinstance(value, Decimal):
+        return int(value)
+    return int(value) if value is not None else value
+
+
+def _parse_iso_date(value: str, field_name: str) -> str:
+    try:
+        date.fromisoformat(value)
+        return value
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400, detail=f"{field_name} must be ISO8601 date"
+        ) from exc
+
+
+def _validate_base_currency(value: str) -> str:
+    if not _CURRENCY_RE.match(value):
+        raise HTTPException(
+            status_code=400, detail="base_currency must be 3 uppercase letters"
+        )
+    return value
+
+
+# 少数では為替が整数だった場合どうするのか問題？
+def _parse_rate_to_jpy(value) -> Decimal:
+    if isinstance(value, bool):
+        raise HTTPException(status_code=400, detail="rate_to_jpy must be decimal")
+    try:
+        dec = Decimal(str(value))
+    except (InvalidOperation, TypeError) as exc:
+        raise HTTPException(
+            status_code=400, detail="rate_to_jpy must be decimal"
+        ) from exc
+    if dec == dec.to_integral_value():
+        raise HTTPException(status_code=400, detail="rate_to_jpy msut be decimal")
+    return dec
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00.00", "Z")
+
+
+# デコレーター
 @router.get("/me/trips", response_model=TripsResponse)
 def list_my_trips(x_debug_user_id: str | None = Header(default=None)):
     """
@@ -171,81 +317,6 @@ def _query_trip_members(dynamodb, table_name: str, user_id: str) -> List[dict]:
     return items
 
 
-def _batch_get_items(
-    dynamodb, table_name: str, ids: List[str], key_name: str
-) -> List[dict]:
-    if not ids:
-        return []
-
-    client = dynamodb.meta.client
-    results: List[dict] = []
-
-    def _chunks(seq: List[str], size: int = 100):
-        for i in range(0, len(seq), size):
-            yield seq[i : i + size]
-
-    for chunk in _chunks(ids):
-        request = {
-            "RequestItems": {
-                table_name: {"Keys": [{key_name: item_id} for item_id in chunk]}
-            }
-        }
-        while request["RequestItems"].get(table_name, {}).get("Keys"):
-            response = client.batch_get_item(**request)
-            results.extend(response.get("Responses", {}).get(table_name, []))
-            unprocessed = (
-                response.get("UnprocessedKeys", {}).get(table_name, {}).get("Keys")
-            )
-            request = {"RequestItems": {table_name: {"Keys": unprocessed or []}}}
-
-    return results
-
-
-def _get_trip_or_404(dynamodb, table_name: str, trip_id: str) -> dict:
-    response = dynamodb.Table(table_name).get_item(Key={"trip_id": trip_id})
-    item = response.get("Item")
-    if not item:
-        raise HTTPException(status_code=404, detail="Trip not found")
-    return item
-
-
-def _ensure_member_or_forbid(
-    dynamodb, table_name: str, user_id: str, trip_id: str
-) -> dict:
-    """
-    Ensure the user is a member of the trip (TripMembers PK=user_id, SK=trip_id).
-    """
-    response = dynamodb.Table(table_name).get_item(
-        Key={"user_id": user_id, "trip_id": trip_id}
-    )
-    item = response.get("Item")
-    if not item:
-        raise HTTPException(status_code=403, detail="Forbidden")
-    return item
-
-
-def _get_owner_name(
-    dynamodb, users_table: str, owner_id: Optional[str]
-) -> Optional[str]:
-    if not owner_id:
-        return None
-    response = dynamodb.Table(users_table).get_item(Key={"user_id": owner_id})
-    item = response.get("Item") or {}
-    return item.get("name", "owner")
-
-
-def _as_float(value):
-    if isinstance(value, Decimal):
-        return float(value)
-    return value
-
-
-def _as_int(value):
-    if isinstance(value, Decimal):
-        return int(value)
-    return int(value) if value is not None else value
-
-
 @router.get("/trips/{trip_id}", response_model=TripDetail)
 def get_trip_detail(
     trip_id: str = Path(..., description="Trip ID"),
@@ -343,3 +414,56 @@ def list_expenses(
         raise HTTPException(status_code=500, detail="Failed to fetch expenses") from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Unexpected error") from exc
+
+
+@router.post("/trips", response_model=TripDetail)
+def create_trip(
+    req: TripCreateRequest, x_debug_user_id: str | None = Header(default=None)
+):
+    user_id = _get_user_id(x_debug_user_id)
+    tables = get_table_names()
+    dynamodb = get_dynamodb_resource()
+
+    start_date = _parse_iso_date(req.start_date, "start_date")
+    end_date = _parse_iso_date(req.end_date, "end_date")
+    base_currency = _validate_base_currency(req.base_currency)
+    rate_to_jpy = _parse_rate_to_jpy(req.rate_to_jpy)
+
+    trip_id = str(uuid.uuid4())
+    created_at = _utc_now_iso()
+
+    trip_item = {
+        "trip_id": trip_id,
+        "owner_id": user_id,
+        "title": req.title,
+        "country": req.country,
+        "start_date": start_date,
+        "end_date": end_date,
+        "base_currency": base_currency,
+        "rate_to_jpy": rate_to_jpy,
+        "created_at": created_at,
+    }
+
+    member_item = {
+        "user_id": user_id,
+        "trip_id": trip_id,
+        "role": "owner",
+        "joined_at": created_at,
+    }
+
+    try:
+        dynamodb.Table(tables["trips"]).put_item(Item=trip_item)
+        dynamodb.Table(tables["trip_members"]).put_item(Item=member_item)
+        return TripDetail(
+            trip_id=trip_id,
+            title=req.title,
+            country=req.country,
+            start_date=start_date,
+            end_date=end_date,
+            base_currency=base_currency,
+            rate_to_jpy=float(rate_to_jpy),
+            owner_id=user_id,
+            owner_name="owner",
+        )
+    except (ClientError, BotoCoreError) as exc:
+        raise HTTPException(status_code=500, detail="Failed to create trip") from exc
