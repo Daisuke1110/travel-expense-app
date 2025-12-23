@@ -68,6 +68,15 @@ class TripCreateRequest(BaseModel):
     rate_to_jpy: float | int | str
 
 
+class TripUpdateRequest(BaseModel):
+    title: str | None = None
+    country: str | None = None
+    start_date: str | None = None
+    end_date: str | None = None
+    rate_to_jpy: float | int | str | None = None
+    base_currency: str | None = None
+
+
 _CURRENCY_RE = re.compile(r"^[A-Z]{3}$")
 
 
@@ -200,12 +209,12 @@ def _parse_rate_to_jpy(value) -> Decimal:
             status_code=400, detail="rate_to_jpy must be decimal"
         ) from exc
     if dec == dec.to_integral_value():
-        raise HTTPException(status_code=400, detail="rate_to_jpy msut be decimal")
+        raise HTTPException(status_code=400, detail="rate_to_jpy must be decimal")
     return dec
 
 
 def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat().replace("+00.00", "Z")
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 # デコレーター
@@ -467,3 +476,79 @@ def create_trip(
         )
     except (ClientError, BotoCoreError) as exc:
         raise HTTPException(status_code=500, detail="Failed to create trip") from exc
+
+
+@router.patch("/trips/{trip_id}", response_model=TripDetail)
+def update_trip(
+    trip_id: str = Path(..., description="Trip ID"),
+    req: TripUpdateRequest = ...,
+    x_debug_user_id: str | None = Header(default=None),
+):
+    user_id = _get_user_id(x_debug_user_id)
+    tables = get_table_names()
+    dynamodb = get_dynamodb_resource()
+
+    try:
+        trip = _get_trip_or_404(dynamodb, tables["trips"], trip_id)
+        _ensure_owner(dynamodb, tables["trip_members"], user_id, trip_id)
+
+        if req.base_currency is not None and req.base_currency != trip.get(
+            "base_currency"
+        ):
+            raise HTTPException(
+                status_code=400, detail="base_currency cannot be changed"
+            )
+
+        update_values: dict[str, object] = {}
+        if req.title is not None:
+            update_values["title"] = req.title
+        if req.country is not None:
+            update_values["country"] = req.country
+        if req.start_date is not None:
+            update_values["start_date"] = _parse_iso_date(req.start_date, "start_date")
+        if req.end_date is not None:
+            update_values["end_date"] = _parse_iso_date(req.end_date, "end_date")
+        if req.rate_to_jpy is not None:
+            update_values["rate_to_jpy"] = _parse_rate_to_jpy(req.rate_to_jpy)
+
+        if not update_values:
+            raise HTTPException(status_code=400, detail="No fields to update")
+
+        expr_names = {}
+        expr_values = {}
+        sets = []
+        for key, value in update_values.items():
+            name_key = f"#{key}"
+            value_key = f":{key}"
+            expr_names[name_key] = key
+            expr_values[value_key] = value
+            sets.append(f"{name_key} = {value_key}")
+
+        response = dynamodb.Table(tables["trips"]).update_item(
+            Key={"trip_id": trip_id},
+            UpdateExpression="SET " + ", ".join(sets),
+            ExpressionAttributeNames=expr_names,
+            ExpressionAttributeValues=expr_values,
+            ReturnValues="ALL_NEW",
+        )
+
+        updated = response.get("Attributes", {})
+        owner_name = _get_owner_name(dynamodb, tables["users"], updated.get("owner_id"))
+
+        return TripDetail(
+            trip_id=updated.get("trip_id", trip_id),
+            title=updated.get("title", ""),
+            country=updated.get("country", ""),
+            start_date=updated.get("start_date", ""),
+            end_date=updated.get("end_date", ""),
+            base_currency=updated.get("base_currency", ""),
+            rate_to_jpy=_as_float(updated.get("rate_to_jpy", 0.0)),
+            owner_id=updated.get("owner_id"),
+            owner_name=owner_name or "owner",
+        )
+    except HTTPException:
+        raise
+    except (ClientError, BotoCoreError) as exc:
+        raise HTTPException(status_code=500, detail="Failed to update trip") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Unexpected error") from exc
