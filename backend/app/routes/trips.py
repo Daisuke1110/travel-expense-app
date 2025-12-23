@@ -3,7 +3,7 @@
 from boto3.dynamodb.conditions import Key
 from botocore.exceptions import BotoCoreError, ClientError
 from decimal import Decimal, InvalidOperation
-from fastapi import APIRouter, Header, HTTPException, Path
+from fastapi import APIRouter, Header, HTTPException, Path, Response
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import date, datetime, timezone
@@ -215,6 +215,59 @@ def _parse_rate_to_jpy(value) -> Decimal:
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _delete_trip_members_by_trip_id(dynamodb, table_name: str, trip_id: str):
+    table = dynamodb.Table(table_name)
+    last_evaluated_key = None
+
+    while True:
+        params = {
+            "IndexName": "GSI1",
+            "KeyConditionExpression": Key("trip_id").eq(trip_id),
+        }
+        if last_evaluated_key:
+            params["ExclusiveStartKey"] = last_evaluated_key
+
+        resp = table.query(**params)
+        items = resp.get("Items", [])
+        if items:
+            with table.batch_writer() as batch:
+                for item in items:
+                    batch.delete_item(
+                        Key={"user_id": item["user_id"], "trip_id": item["trip_id"]}
+                    )
+
+        last_evaluated_key = resp.get("LastEvaluatedKey")
+        if not last_evaluated_key:
+            break
+
+
+def _delete_expenses_by_trip_id(dynamodb, table_name: str, trip_id: str):
+    table = dynamodb.Table(table_name)
+    last_evaluated_key = None
+
+    while True:
+        params = {"KeyConditionExpression": Key("trip_id").eq(trip_id)}
+        if last_evaluated_key:
+            params["ExclusiveStartKey"] = last_evaluated_key
+
+        resp = table.query(**params)
+        items = resp.get("Items", [])
+
+        if items:
+            with table.batch_writer() as batch:
+                for item in items:
+                    batch.delete_item(
+                        Key={
+                            "trip_id": item["trip_id"],
+                            "datetime_expense_id": item["datetime_expense_id"],
+                        }
+                    )
+
+        last_evaluated_key = resp.get("LastEvaluatedKey")
+        if not last_evaluated_key:
+            break
 
 
 # デコレーター
@@ -550,5 +603,31 @@ def update_trip(
         raise
     except (ClientError, BotoCoreError) as exc:
         raise HTTPException(status_code=500, detail="Failed to update trip") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Unexpected error") from exc
+
+
+@router.delete("/trips/{trip_id}", status_code=204)
+def delete_trip(
+    trip_id: str = Path(..., description="Trip ID"),
+    x_debug_user_id: str | None = Header(default=None),
+):
+    user_id = _get_user_id(x_debug_user_id)
+    tables = get_table_names()
+    dynamodb = get_dynamodb_resource()
+
+    try:
+        _get_trip_or_404(dynamodb, tables["trips"], trip_id)
+        _ensure_owner(dynamodb, tables["trip_members"], user_id, trip_id)
+
+        dynamodb.Table(tables["trips"]).delete_item(Key={"trip_id": trip_id})
+        _delete_trip_members_by_trip_id(dynamodb, tables["trip_members"], trip_id)
+        _delete_expenses_by_trip_id(dynamodb, tables["expenses"], trip_id)
+
+        return Response(status_code=204)
+    except HTTPException:
+        raise
+    except (ClientError, BotoCoreError) as exc:
+        raise HTTPException(status_code=500, detail="Failed to delete trip") from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Unexpected error") from exc
