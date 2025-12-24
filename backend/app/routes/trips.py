@@ -77,6 +77,17 @@ class TripUpdateRequest(BaseModel):
     base_currency: str | None = None
 
 
+class TripMemberCreateRequest(BaseModel):
+    user_id: str
+
+
+class TripMemberResponse(BaseModel):
+    user_id: str
+    trip_id: str
+    role: str
+    joined_at: str
+
+
 _CURRENCY_RE = re.compile(r"^[A-Z]{3}$")
 
 
@@ -631,3 +642,49 @@ def delete_trip(
         raise HTTPException(status_code=500, detail="Failed to delete trip") from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Unexpected error") from exc
+
+
+@router.post("/trips/{trip_id}/members", response_model=TripMemberResponse)
+def add_member(
+    trip_id: str = Path(..., description="Trip_ID"),
+    req: TripMemberCreateRequest = ...,
+    x_debug_user_id: str | None = Header(default=None),
+):
+    user_id = _get_user_id(x_debug_user_id)
+    tables = get_table_names()
+    dynamodb = get_dynamodb_resource()
+
+    try:
+        _get_trip_or_404(dynamodb, tables["trips"], trip_id)
+        _ensure_owner(dynamodb, tables["trip_members"], user_id, trip_id)
+
+        joined_at = _utc_now_iso()
+        member_item = {
+            "user_id": req.user_id,
+            "trip_id": trip_id,
+            "role": "member",
+            "joined_at": joined_at,
+        }
+
+        dynamodb.Table(tables["trip_members"]).put_item(
+            Item=member_item,
+            ConditionExpression="attribute_not_exists(user_id) AND attribute_not_exists(trip_id)",
+        )
+
+        return TripMemberResponse(
+            user_id=req.user_id, trip_id=trip_id, role="member", joined_at=joined_at
+        )
+
+    except HTTPException:
+        raise
+    except ClientError as exc:
+        if (
+            exc.response.get("Error", {}).get("Code")
+            == "ConditionalCheckFailedException"
+        ):
+            raise HTTPException(
+                status_code=409, detail="Member already exists"
+            ) from exc
+        raise HTTPException(status_code=500, detail="Failed to add member") from exc
+    except BotoCoreError as exc:
+        raise HTTPException(status_code=500, detail="Failed to add member")
