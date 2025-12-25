@@ -88,6 +88,14 @@ class TripMemberResponse(BaseModel):
     joined_at: str
 
 
+class ExpenseCreateRequest(BaseModel):
+    amount: int | float | str
+    currency: str
+    category: Optional[str] = None
+    note: Optional[str] = None
+    datetime: str
+
+
 _CURRENCY_RE = re.compile(r"^[A-Z]{3}$")
 
 
@@ -279,6 +287,32 @@ def _delete_expenses_by_trip_id(dynamodb, table_name: str, trip_id: str):
         last_evaluated_key = resp.get("LastEvaluatedKey")
         if not last_evaluated_key:
             break
+
+
+def _parse_amount_int(value) -> int:
+    if isinstance(value, bool):
+        raise HTTPException(status_code=400, detail="amount must be integer")
+    try:
+        dec = Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail="amount must be integer") from exc
+    if dec != dec.to_integral_value():
+        raise HTTPException(status_code=400, detail="amount must be integer")
+    return int(dec)
+
+
+def _parse_datetime_utc(value: str) -> str:
+    if not value.endswith("Z"):
+        raise HTTPException(status_code=400, detail="datetime must be ISO8601 UTC")
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400, detail="datetime must be ISO8601 UTC"
+        ) from exc
+    if dt.tzinfo is None or dt.utcoffset() != timezone.utc.utcoffset(dt):
+        raise HTTPException(status_code=400, detail="datetime must be ISO8601 UTC")
+    return value
 
 
 # デコレーター
@@ -688,3 +722,64 @@ def add_member(
         raise HTTPException(status_code=500, detail="Failed to add member") from exc
     except BotoCoreError as exc:
         raise HTTPException(status_code=500, detail="Failed to add member")
+
+
+@router.post("/trips/{trip_id}/expenses", response_model=ExpenseItem)
+def create_expense(
+    trip_id: str = Path(..., description="Trip ID"),
+    req: ExpenseCreateRequest = ...,
+    x_debug_user_id: str | None = Header(default=None),
+):
+    user_id = _get_user_id(x_debug_user_id)
+    tables = get_table_names()
+    dynamodb = get_dynamodb_resource()
+
+    try:
+        trip = _get_trip_or_404(dynamodb, tables["trips"], trip_id)
+        _ensure_member_or_forbid(dynamodb, tables["trip_members"], user_id, trip_id)
+
+        if req.currency != trip.get("base_currency"):
+            raise HTTPException(
+                status_code=400, detail="currency must match base_currency"
+            )
+
+        amount = _parse_amount_int(req.amount)
+        datetime_value = _parse_datetime_utc(req.datetime)
+
+        expense_id = str(uuid.uuid4())
+        datetime_expense_id = f"{datetime_value}#{expense_id}"
+        created_at = _utc_now_iso()
+
+        item = {
+            "trip_id": trip_id,
+            "datetime_expense_id": datetime_expense_id,
+            "expense_id": expense_id,
+            "datetime": datetime_value,
+            "user_id": user_id,
+            "amount": Decimal(amount),
+            "currency": req.currency,
+            "category": req.category,
+            "note": req.note,
+            "created_at": created_at,
+        }
+
+        dynamodb.Table(tables["expenses"]).put_item(Item=item)
+
+        return ExpenseItem(
+            expense_id=expense_id,
+            trip_id=trip_id,
+            user_id=user_id,
+            amount=amount,
+            currency=req.currency,
+            category=req.category,
+            note=req.note,
+            datetime=datetime_value,
+            datetime_expense_id=datetime_expense_id,
+            created_at=created_at,
+        )
+    except HTTPException:
+        raise
+    except (ClientError, BotoCoreError) as exc:
+        raise HTTPException(status_code=500, detail="Failed to create expense") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Unexpected error") from exc
