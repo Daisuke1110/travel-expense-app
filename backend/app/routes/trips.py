@@ -96,6 +96,14 @@ class ExpenseCreateRequest(BaseModel):
     datetime: str
 
 
+class ExpenseUpdateRequest(BaseModel):
+    amount: int | float | str | None = None
+    currency: str | None = None
+    category: Optional[str] = None
+    note: Optional[str] = None
+    datetime: str | None = None
+
+
 _CURRENCY_RE = re.compile(r"^[A-Z]{3}$")
 
 
@@ -313,6 +321,19 @@ def _parse_datetime_utc(value: str) -> str:
     if dt.tzinfo is None or dt.utcoffset() != timezone.utc.utcoffset(dt):
         raise HTTPException(status_code=400, detail="datetime must be ISO8601 UTC")
     return value
+
+
+def _get_expense_by_id(dynamodb, table_name: str, expense_id: str) -> dict:
+    table = dynamodb.Table(table_name)
+    resp = table.query(
+        IndexName="GSI1",
+        KeyConditionExpression=Key("expense_id").eq(expense_id),
+        Limit=1,
+    )
+    items = resp.get("Items", [])
+    if not items:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    return items[0]
 
 
 # デコレーター
@@ -783,3 +804,116 @@ def create_expense(
         raise HTTPException(status_code=500, detail="Failed to create expense") from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Unexpected error") from exc
+
+
+@router.patch("/trips/{trip_id}/expenses/{expense_id}", response_model=ExpenseItem)
+def update_expense(
+    trip_id: str = Path(..., description="Trip ID"),
+    expense_id: str = Path(..., description="Expense ID"),
+    req: ExpenseUpdateRequest = ...,
+    x_debug_user_id: str | None = Header(default=None),
+):
+    user_id = _get_user_id(x_debug_user_id)
+    tables = get_table_names()
+    dynamodb = get_dynamodb_resource()
+
+    try:
+        trip = _get_trip_or_404(dynamodb, tables["trips"], trip_id)
+        _ensure_member_or_forbid(dynamodb, tables["trip_members"], user_id, trip_id)
+
+        expense = _get_expense_by_id(dynamodb, tables["expenses"], expense_id)
+        if expense.get("trip_id") != trip_id:
+            raise HTTPException(status_code=404, detail="Expense not found")
+
+        if req.currency is not None and req.currency != trip.get("base_currency"):
+            raise HTTPException(
+                status_code=400, detail="currency must match base_currency"
+            )
+
+        update_values: dict[str, object] = {}
+        if req.amount is not None:
+            update_values["amount"] = Decimal(_parse_amount_int(req.amount))
+        if req.currency is not None:
+            update_values["currency"] = req.currency
+        if req.category is not None:
+            update_values["category"] = req.category
+        if req.note is not None:
+            update_values["note"] = req.note
+
+        new_datetime = None
+        if req.datetime is not None:
+            new_datetime = _parse_datetime_utc(req.datetime)
+
+        if not update_values and new_datetime is None:
+            raise HTTPException(status_code=400, detail="No fields to update")
+
+        table = dynamodb.Table(tables["expenses"])
+
+        if new_datetime is not None and new_datetime != expense.get("datetime"):
+            new_datetime_expense_id = f"{new_datetime}#{expense_id}"
+            new_item = {
+                "trip_id": trip_id,
+                "datetime_expense_id": new_datetime_expense_id,
+                "expense_id": expense_id,
+                "datetime": new_datetime,
+                "user_id": expense.get("user_id"),
+                "amount": update_values.get("amount", expense.get("amount")),
+                "currency": update_values.get("currency", expense.get("currency")),
+                "category": update_values.get("category", expense.get("category")),
+                "note": update_values.get("note", expense.get("note")),
+                "created_at": expense.get("created_at"),
+            }
+            table.put_item(Item=new_item)
+            table.delete_item(
+                Key={
+                    "trip_id": expense["trip_id"],
+                    "datetime_expense_id": expense["datetime_expense_id"],
+                }
+            )
+            updated = new_item
+        else:
+
+            expr_names = {}
+            expr_values = {}
+            sets = []
+            for key, value in update_values.items():
+                name_key = f"#{key}"
+                value_key = f":{key}"
+                expr_names[name_key] = key
+                expr_values[value_key] = value
+                sets.append(f"{name_key} = {value_key}")
+
+            if sets:
+                resp = table.update_item(
+                    Key={
+                        "trip_id": expense["trip_id"],
+                        "datetime_expense_id": expense["datetime_expense_id"],
+                    },
+                    UpdateExpression="SET " + ", ".join(sets),
+                    ExpressionAttributeNames=expr_names,
+                    ExpressionAttributeValues=expr_values,
+                    ReturnValues="ALL_NEW",
+                )
+                updated = resp.get("Attributes", {})
+            else:
+                updated = expense
+
+        return ExpenseItem(
+            expense_id=updated.get("expense_id", ""),
+            trip_id=updated.get("trip_id", ""),
+            user_id=updated.get("user_id", ""),
+            amount=_as_int(updated.get("amount", 0)),
+            currency=updated.get("currency", ""),
+            category=updated.get("category"),
+            note=updated.get("note"),
+            datetime=updated.get("datetime", ""),
+            datetime_expense_id=updated.get("datetime_expense_id", ""),
+            created_at=updated.get("created_at"),
+        )
+
+    except HTTPException:
+        raise
+    except (ClientError, BotoCoreError) as exc:
+        raise HTTPException(status_code=500, detail="Failed to update expense") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Unexpected Error")
