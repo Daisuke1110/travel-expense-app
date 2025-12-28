@@ -917,3 +917,35 @@ def update_expense(
         raise HTTPException(status_code=500, detail="Failed to update expense") from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Unexpected Error")
+
+
+@router.delete("/trips/{trip_id}/expenses/{expense_id}", status_code=204)
+def delete_expense(
+    trip_id: str = Path(..., description="Trip ID"),
+    expense_id: str = Path(..., description="Expense ID"),
+    x_debug_user_id: str | None = Header(default=None),
+):
+    user_id = _get_user_id(x_debug_user_id)
+    tables = get_table_names()
+    dynamodb = get_dynamodb_resource()
+
+    try:
+        _get_trip_or_404(dynamodb, tables["trips"], trip_id)
+        _ensure_member_or_forbid(dynamodb, tables["trip_members"], user_id, trip_id)
+        expense = _get_expense_by_id(dynamodb, tables["expenses"], expense_id)
+        if expense["trip_id"] != trip_id:
+            raise HTTPException(status_code=404, detail="Expense not fount")
+
+        dynamodb.Table(tables["expenses"]).delete_item(
+            Key={
+                "trip_id": expense["trip_id"],
+                "datetime_expense_id": expense["datetime_expense_id"],
+            }
+        )
+
+    except HTTPException:
+        raise
+    except (ClientError, BotoCoreError) as exc:
+        raise HTTPException(status_code=500, detail="Failed to delete expense") from exc
+    except Exception:
+        raise HTTPException(status_code=500, detail="Unexpected error")
