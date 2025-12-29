@@ -1,0 +1,103 @@
+﻿{
+    "Items": [
+        {
+            "note": {
+                "S": "驕雁恍蝨ｰ"
+            },
+            "trip_id": {
+                "S": "trip-999"
+            },
+            "datetime": {
+                "S": "2026-05-01T15:00:00Z"
+            },
+            "amount": {
+                "N": "500"
+            },
+            "user_id": {
+                "S": "user-123"
+            },
+            "created_at": {
+                "S": "2025-12-25T10:54:41.399477Z"
+            },
+            "currency": {
+                "S": "KRW"
+            },
+            "category": {
+                "S": "amusement"
+            },
+            "datetime_expense_id": {
+                "S": "2026-05-01T15:00:00Z#40f1456f-bb65-433c-8230-a13eb60f9a4a"
+            },
+            "expense_id": {
+                "S": "40f1456f-bb65-433c-8230-a13eb60f9a4a"
+            }
+        },
+        {
+            "note": {
+                "S": "驕雁恍蝨ｰ"
+            },
+            "trip_id": {
+                "S": "trip-999"
+            },
+            "datetime": {
+                "S": "2026-05-01T15:00:00Z"
+            },
+            "amount": {
+                "N": "500"
+            },
+            "user_id": {
+                "S": "user-123"
+            },
+            "created_at": {
+                "S": "2025-12-25T10:57:05.036544Z"
+            },
+            "currency": {
+                "S": "KRW"
+            },
+            "category": {
+                "S": "amusement"
+            },
+            "datetime_expense_id": {
+                "S": "2026-05-01T15:00:00Z#9610cf41-434e-4da0-a0ed-0a7f6de406d1"
+            },
+            "expense_id": {
+                "S": "9610cf41-434e-4da0-a0ed-0a7f6de406d1"
+            }
+        },
+        {
+            "note": {
+                "S": "遊園地"
+            },
+            "trip_id": {
+                "S": "trip-999"
+            },
+            "datetime": {
+                "S": "2026-05-01T15:00:00Z"
+            },
+            "amount": {
+                "N": "500"
+            },
+            "user_id": {
+                "S": "user-123"
+            },
+            "created_at": {
+                "S": "2025-12-25T11:00:06.991191Z"
+            },
+            "currency": {
+                "S": "KRW"
+            },
+            "category": {
+                "S": "amusement"
+            },
+            "datetime_expense_id": {
+                "S": "2026-05-01T15:00:00Z#f833b3a5-52a1-4765-9ea9-ebe5b8d00161"
+            },
+            "expense_id": {
+                "S": "f833b3a5-52a1-4765-9ea9-ebe5b8d00161"
+            }
+        }
+    ],
+    "Count": 3,
+    "ScannedCount": 3,
+    "ConsumedCapacity": null
+}

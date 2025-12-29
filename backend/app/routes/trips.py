@@ -79,6 +79,7 @@ class TripUpdateRequest(BaseModel):
 
 class TripMemberCreateRequest(BaseModel):
     user_id: str
+    role: str | None = None
 
 
 class TripMemberResponse(BaseModel):

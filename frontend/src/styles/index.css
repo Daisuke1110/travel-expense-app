@@ -1,0 +1,158 @@
+﻿@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap");
+
+:root {
+  --bg: #f7f3ea;
+  --ink: #1f1d1a;
+  --muted: #6b6258;
+  --accent: #ff7a59;
+  --accent-2: #3f6c51;
+  --card: #fffaf2;
+  --stroke: #e7dccb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  color: var(--ink);
+  background: radial-gradient(80% 60% at 20% 0%, #fff3d8 0%, var(--bg) 60%);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.page {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 20px 16px 96px;
+}
+
+.hero {
+  background: linear-gradient(135deg, #fff7e8, #ffe0c7);
+  border: 1px solid var(--stroke);
+  padding: 18px;
+  border-radius: 18px;
+  box-shadow: 0 8px 20px rgba(31, 29, 26, 0.08);
+  margin-bottom: 18px;
+}
+
+.hero__pill {
+  display: inline-block;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+  background: #e9f2e7;
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+
+.hero__title {
+  margin: 8px 0 6px;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.hero__sub {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.trip-sections {
+  display: grid;
+  gap: 20px;
+}
+
+.section-title {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.card-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.trip-card {
+  display: block;
+  background: var(--card);
+  border: 1px solid var(--stroke);
+  border-radius: 14px;
+  padding: 14px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.trip-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(31, 29, 26, 0.08);
+}
+
+.trip-card__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.trip-card__title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.trip-card__country {
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+
+.trip-card__dates {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.trip-card__owner {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--accent-2);
+}
+
+.status {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.status--error {
+  color: #b23b3b;
+}
+
+.empty {
+  font-size: 13px;
+  color: var(--muted);
+  border: 1px dashed var(--stroke);
+  padding: 12px;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.fab {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 14px 18px;
+  border-radius: 999px;
+  font-weight: 700;
+  box-shadow: 0 10px 22px rgba(255, 122, 89, 0.35);
+  cursor: pointer;
+}

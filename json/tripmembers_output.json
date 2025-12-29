@@ -1,0 +1,77 @@
+﻿{
+    "Items": [
+        {
+            "joined_at": {
+                "S": "2025-12-23T11:24:06.161680+00:00"
+            },
+            "trip_id": {
+                "S": "trip-999"
+            },
+            "role": {
+                "S": "owner"
+            },
+            "user_id": {
+                "S": "user-456"
+            }
+        },
+        {
+            "joined_at": {
+                "S": "2025-12-23T11:24:06.161680+00:00"
+            },
+            "trip_id": {
+                "S": "trip-999"
+            },
+            "role": {
+                "S": "member"
+            },
+            "user_id": {
+                "S": "user-999"
+            }
+        },
+        {
+            "joined_at": {
+                "S": "2025-12-24T11:20:14.937668Z"
+            },
+            "trip_id": {
+                "S": "trip-999"
+            },
+            "role": {
+                "S": "member"
+            },
+            "user_id": {
+                "S": "user_friend_1"
+            }
+        },
+        {
+            "joined_at": {
+                "S": "2025-12-21T03:19:39.125336+00:00"
+            },
+            "trip_id": {
+                "S": "fd119dd2-6ef3-4150-a2f0-30e7179cf0ca"
+            },
+            "role": {
+                "S": "owner"
+            },
+            "user_id": {
+                "S": "user-123"
+            }
+        },
+        {
+            "joined_at": {
+                "S": "2025-12-23T11:24:06.161680+00:00"
+            },
+            "trip_id": {
+                "S": "trip-999"
+            },
+            "role": {
+                "S": "member"
+            },
+            "user_id": {
+                "S": "user-123"
+            }
+        }
+    ],
+    "Count": 5,
+    "ScannedCount": 5,
+    "ConsumedCapacity": null
+}
