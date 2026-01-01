@@ -156,3 +156,125 @@ a {
   box-shadow: 0 10px 22px rgba(255, 122, 89, 0.35);
   cursor: pointer;
 }
+
+.detail-header {
+  margin-bottom: 16px;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--accent-2);
+  margin-bottom: 12px;
+}
+
+.detail-title {
+  margin: 4px 0 10px;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--stroke);
+  background: #fff;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.summary {
+  display: grid;
+  gap: 12px;
+  background: #1f1d1a;
+  color: #fff8ee;
+  padding: 16px;
+  border-radius: 16px;
+  margin-bottom: 18px;
+}
+
+.summary__label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+}
+
+.summary__value {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.summary__rate {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.expenses-section {
+  display: grid;
+  gap: 12px;
+}
+
+.expense-list {
+  display: grid;
+  gap: 12px;
+}
+
+.expense-card {
+  background: #fff;
+  border: 1px solid var(--stroke);
+  border-radius: 14px;
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.expense-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.expense-card__amount {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.expense-card__yen {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.expense-card__delete {
+  background: transparent;
+  border: none;
+  color: #c84545;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.expense-card__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.expense-card__note {
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.muted {
+  color: var(--muted);
+}

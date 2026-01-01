@@ -1,5 +1,7 @@
 {  
  "amount" :500,
+ "currency" : "KRW",
  "category" : "shopping",  
- "note" : "amazon"
+ "note" : "amazon",
+ "datetime":"2026-05-01T15:00:00Z"
  }

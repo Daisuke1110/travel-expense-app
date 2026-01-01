@@ -14,6 +14,22 @@ export type TripsResponse = {
   shared_trips: TripSummary[];
 };
 
+export type TripDetail = {
+  trip_id: string;
+  title: string;
+  country: string;
+  start_date: string;
+  end_date: string;
+  base_currency: string;
+  rate_to_jpy: number;
+  owner_id?: string | null;
+  owner_name?: string | null;
+};
+
 export function fetchMyTrips() {
   return apiFetch<TripsResponse>("/me/trips");
+}
+
+export function fetchTripDetail(tripId: string) {
+  return apiFetch<TripDetail>(`/trips/${tripId}`);
 }
