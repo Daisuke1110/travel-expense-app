@@ -7,7 +7,11 @@ type Props = {
 };
 
 function formatDate(value: string) {
-  return value.replace("T", " ").replace("Z", " UTC");
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString();
 }
 
 export default function ExpenseItemCard({ item, rateToJpy, onDelete }: Props) {

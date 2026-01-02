@@ -17,8 +17,23 @@ export type ExpensesResponse = {
   expenses: ExpenseItem[];
 };
 
+export type ExpenseCreateRequest = {
+  amount: number;
+  currency: string;
+  category?: string;
+  note?: string;
+  datetime: string;
+};
+
 export function fetchTripExpenses(tripId: string) {
   return apiFetch<ExpensesResponse>(`/trips/${tripId}/expenses`);
+}
+
+export function createExpense(tripId: string, payload: ExpenseCreateRequest) {
+  return apiFetch<ExpenseItem>(`/trips/${tripId}/expenses`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export function deleteExpense(tripId: string, expenseId: string) {

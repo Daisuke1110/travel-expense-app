@@ -72,7 +72,7 @@ export default function TripDetailPage() {
         </div>
       </section>
 
-      <button className="fab">+ Add Expense</button>
+      <Link className="fab" to={`/trips/${trip.trip_id}/add`}>+ Add Expense</Link>
     </div>
   );
 }

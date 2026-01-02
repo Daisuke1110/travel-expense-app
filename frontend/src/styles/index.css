@@ -30,6 +30,7 @@ a {
   max-width: 420px;
   margin: 0 auto;
   padding: 20px 16px 96px;
+  position: relative;
 }
 
 .hero {
@@ -155,6 +156,7 @@ a {
   font-weight: 700;
   box-shadow: 0 10px 22px rgba(255, 122, 89, 0.35);
   cursor: pointer;
+  text-align: center;
 }
 
 .detail-header {
@@ -277,4 +279,84 @@ a {
 
 .muted {
   color: var(--muted);
+}
+
+.modal {
+  position: relative;
+  z-index: 2;
+  background: #fff;
+  border-radius: 18px;
+  border: 1px solid var(--stroke);
+  padding: 18px;
+  box-shadow: 0 12px 28px rgba(31, 29, 26, 0.18);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(31, 29, 26, 0.35);
+  backdrop-filter: blur(3px);
+}
+
+.modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.modal__title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.modal__subtitle {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.modal__close {
+  font-size: 22px;
+  color: var(--muted);
+}
+
+.modal__form {
+  display: grid;
+  gap: 14px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.field input,
+.field select,
+.field textarea {
+  font-family: inherit;
+  font-size: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--stroke);
+}
+
+.field input:disabled {
+  background: #f4efe7;
+}
+
+.primary {
+  background: #1f1d1a;
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
