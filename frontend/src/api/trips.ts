@@ -44,6 +44,17 @@ export type TripUpdateRequest = {
   base_currency?: string;
 };
 
+export type TripMemberRequest = {
+  user_id: string;
+};
+
+export type TripMemberResponse = {
+  user_id: string;
+  trip_id: string;
+  role: string;
+  joined_at: string;
+};
+
 export function fetchMyTrips() {
   return apiFetch<TripsResponse>("/me/trips");
 }
@@ -68,4 +79,11 @@ export function updateTrip(tripId: string, payload: TripUpdateRequest) {
 
 export function deleteTrip(tripId: string) {
   return apiFetch<void>(`/trips/${tripId}`, { method: "DELETE" });
+}
+
+export function addTripMember(tripId: string, payload: TripMemberRequest) {
+  return apiFetch<TripMemberResponse>(`/trips/${tripId}/members`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }

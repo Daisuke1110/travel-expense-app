@@ -2,7 +2,7 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 import ExpenseItemCard from "../components/ExpenseItem";
 import SummaryBox from "../components/SummaryBox";
-import { deleteTrip, updateTrip } from "../api/trips";
+import { addTripMember, deleteTrip, updateTrip } from "../api/trips";
 import { useExpenses } from "../hooks/useExpenses";
 import { useTrip } from "../hooks/useTrip";
 
@@ -22,6 +22,9 @@ export default function TripDetailPage() {
   const [tripError, setTripError] = useState<string | null>(null);
   const [savingTrip, setSavingTrip] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [memberUserId, setMemberUserId] = useState("");
+  const [memberError, setMemberError] = useState<string | null>(null);
+  const [savingMember, setSavingMember] = useState(false);
 
   const totals = useMemo(() => {
     const totalAmount = expenseState.data.reduce((sum, item) => sum + item.amount, 0);
@@ -99,6 +102,28 @@ export default function TripDetailPage() {
     }
   };
 
+  const handleMemberSave = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!tripState.data) return;
+
+    const userId = memberUserId.trim();
+    if (!userId) {
+      setMemberError("User ID is required.");
+      return;
+    }
+
+    setMemberError(null);
+    setSavingMember(true);
+    try {
+      await addTripMember(tripState.data.trip_id, { user_id: userId });
+      setMemberUserId("");
+    } catch (err) {
+      setMemberError((err as Error).message ?? "Failed to add member");
+    } finally {
+      setSavingMember(false);
+    }
+  };
+
   if (tripState.loading) {
     return <div className="page"><div className="status">Loading trip...</div></div>;
   }
@@ -117,7 +142,7 @@ export default function TripDetailPage() {
   return (
     <div className="page">
       <header className="detail-header">
-        <Link className="back-link" to="/">←Trips</Link>
+        <Link className="back-link" to="/">← Trips</Link>
         <h1 className="detail-title">{trip.title}</h1>
         <div className="detail-meta">
           <span className="chip">{trip.country}</span>
@@ -208,6 +233,26 @@ export default function TripDetailPage() {
               {rateError && <div className="status status--error">{rateError}</div>}
               <button className="primary" type="submit" disabled={savingRate}>
                 {savingRate ? "Saving..." : "Update Rate"}
+              </button>
+            </form>
+          )}
+
+          {settingsOpen && <div className="settings__divider" />}
+
+          {settingsOpen && (
+            <form className="settings__form" onSubmit={handleMemberSave}>
+              <label className="field">
+                <span>Add member</span>
+                <input
+                  type="text"
+                  placeholder="user-abc"
+                  value={memberUserId}
+                  onChange={(event) => setMemberUserId(event.target.value)}
+                />
+              </label>
+              {memberError && <div className="status status--error">{memberError}</div>}
+              <button className="primary" type="submit" disabled={savingMember}>
+                {savingMember ? "Saving..." : "Add member"}
               </button>
             </form>
           )}
