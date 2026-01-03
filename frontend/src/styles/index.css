@@ -8,6 +8,7 @@
   --accent-2: #3f6c51;
   --card: #fffaf2;
   --stroke: #e7dccb;
+  --danger: #c84545;
 }
 
 * {
@@ -131,7 +132,7 @@ a {
 }
 
 .status--error {
-  color: #b23b3b;
+  color: var(--danger);
 }
 
 .empty {
@@ -260,7 +261,7 @@ a {
 .expense-card__delete {
   background: transparent;
   border: none;
-  color: #c84545;
+  color: var(--danger);
   font-weight: 600;
   cursor: pointer;
 }
@@ -359,4 +360,22 @@ a {
 .primary:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+.danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+.danger:hover {
+  background: #ffe9e9;
 }

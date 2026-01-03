@@ -1,4 +1,5 @@
-﻿import TripCard from "../components/TripCard";
+﻿import { Link } from "react-router-dom";
+import TripCard from "../components/TripCard";
 import { useTrips } from "../hooks/useTrips";
 
 export default function HomePage() {
@@ -45,7 +46,7 @@ export default function HomePage() {
         </div>
       )}
 
-      <button className="fab">+ New Trip</button>
+      <Link className="fab" to="/trips/new">+ New Trip</Link>
     </div>
   );
 }

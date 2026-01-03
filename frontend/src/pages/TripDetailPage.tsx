@@ -1,12 +1,16 @@
 ﻿import { useMemo } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import ExpenseItemCard from "../components/ExpenseItem";
 import SummaryBox from "../components/SummaryBox";
+import { deleteTrip } from "../api/trips";
 import { useExpenses } from "../hooks/useExpenses";
 import { useTrip } from "../hooks/useTrip";
 
+const debugUserId = import.meta.env.VITE_DEBUG_USER_ID ?? "";
+
 export default function TripDetailPage() {
   const { tripId } = useParams();
+  const navigate = useNavigate();
   const tripState = useTrip(tripId);
   const expenseState = useExpenses(tripId);
 
@@ -16,6 +20,16 @@ export default function TripDetailPage() {
     const totalYen = Math.round(totalAmount * rate);
     return { totalAmount, totalYen };
   }, [expenseState.data, tripState.data]);
+
+  const canDelete = tripState.data?.owner_id && tripState.data.owner_id === debugUserId;
+
+  const handleDelete = async () => {
+    if (!tripState.data) return;
+    const ok = window.confirm("Delete this trip? This cannot be undone.");
+    if (!ok) return;
+    await deleteTrip(tripState.data.trip_id);
+    navigate("/");
+  };
 
   if (tripState.loading) {
     return <div className="page"><div className="status">Loading trip...</div></div>;
@@ -39,7 +53,7 @@ export default function TripDetailPage() {
         <h1 className="detail-title">{trip.title}</h1>
         <div className="detail-meta">
           <span className="chip">{trip.country}</span>
-          <span className="chip">{trip.start_date} – {trip.end_date}</span>
+          <span className="chip">{trip.start_date} - {trip.end_date}</span>
           <span className="chip">Owner: {trip.owner_name ?? "owner"}</span>
         </div>
       </header>
@@ -50,6 +64,10 @@ export default function TripDetailPage() {
         totalYen={totals.totalYen}
         rateToJpy={trip.rate_to_jpy}
       />
+
+      {canDelete && (
+        <button className="danger" onClick={handleDelete}>Delete Trip</button>
+      )}
 
       <section className="expenses-section">
         <div className="section-title">Expenses</div>
