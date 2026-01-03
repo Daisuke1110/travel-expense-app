@@ -1,4 +1,4 @@
-﻿import { FormEvent, useMemo, useState } from "react";
+﻿import { type FormEvent, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import ExpenseItemCard from "../components/ExpenseItem";
 import SummaryBox from "../components/SummaryBox";
@@ -16,6 +16,11 @@ export default function TripDetailPage() {
   const [rateInput, setRateInput] = useState("");
   const [rateError, setRateError] = useState<string | null>(null);
   const [savingRate, setSavingRate] = useState(false);
+  const [titleInput, setTitleInput] = useState("");
+  const [startDateInput, setStartDateInput] = useState("");
+  const [endDateInput, setEndDateInput] = useState("");
+  const [tripError, setTripError] = useState<string | null>(null);
+  const [savingTrip, setSavingTrip] = useState(false);
 
   const totals = useMemo(() => {
     const totalAmount = expenseState.data.reduce((sum, item) => sum + item.amount, 0);
@@ -60,6 +65,39 @@ export default function TripDetailPage() {
     }
   };
 
+  const handleTripSave = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!tripState.data) return;
+
+    const title = titleInput.trim();
+    const startDate = startDateInput.trim();
+    const endDate = endDateInput.trim();
+    if (!title || !startDate || !endDate) {
+      setTripError("Title and dates are required.");
+      return;
+    }
+
+    setTripError(null);
+    setSavingTrip(true);
+    try {
+      const updated = await updateTrip(tripState.data.trip_id, {
+        title,
+        start_date: startDate,
+        end_date: endDate,
+      });
+      tripState.data.title = updated.title;
+      tripState.data.start_date = updated.start_date;
+      tripState.data.end_date = updated.end_date;
+      setTitleInput("");
+      setStartDateInput("");
+      setEndDateInput("");
+    } catch (err) {
+      setTripError((err as Error).message ?? "Failed to update trip");
+    } finally {
+      setSavingTrip(false);
+    }
+  };
+
   if (tripState.loading) {
     return <div className="page"><div className="status">Loading trip...</div></div>;
   }
@@ -96,7 +134,41 @@ export default function TripDetailPage() {
 
       {canEditRate && (
         <section className="settings">
-          <div className="section-title">Rate settings</div>
+          <div className="section-title">Trip settings</div>
+          <form className="settings__form" onSubmit={handleTripSave}>
+            <label className="field">
+              <span>Title</span>
+              <input
+                type="text"
+                placeholder={trip.title}
+                value={titleInput}
+                onChange={(event) => setTitleInput(event.target.value)}
+              />
+            </label>
+            <label className="field">
+              <span>Start date</span>
+              <input
+                type="date"
+                value={startDateInput}
+                onChange={(event) => setStartDateInput(event.target.value)}
+              />
+            </label>
+            <label className="field">
+              <span>End date</span>
+              <input
+                type="date"
+                value={endDateInput}
+                onChange={(event) => setEndDateInput(event.target.value)}
+              />
+            </label>
+            {tripError && <div className="status status--error">{tripError}</div>}
+            <button className="primary" type="submit" disabled={savingTrip}>
+              {savingTrip ? "Saving..." : "Update Trip"}
+            </button>
+          </form>
+
+          <div className="settings__divider" />
+
           <form className="settings__form" onSubmit={handleRateSave}>
             <label className="field">
               <span>Base currency</span>
