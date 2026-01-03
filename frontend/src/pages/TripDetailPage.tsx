@@ -21,6 +21,7 @@ export default function TripDetailPage() {
   const [endDateInput, setEndDateInput] = useState("");
   const [tripError, setTripError] = useState<string | null>(null);
   const [savingTrip, setSavingTrip] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const totals = useMemo(() => {
     const totalAmount = expenseState.data.reduce((sum, item) => sum + item.amount, 0);
@@ -116,7 +117,7 @@ export default function TripDetailPage() {
   return (
     <div className="page">
       <header className="detail-header">
-        <Link className="back-link" to="/">← Trips</Link>
+        <Link className="back-link" to="/">←Trips</Link>
         <h1 className="detail-title">{trip.title}</h1>
         <div className="detail-meta">
           <span className="chip">{trip.country}</span>
@@ -134,61 +135,82 @@ export default function TripDetailPage() {
 
       {canEditRate && (
         <section className="settings">
-          <div className="section-title">Trip settings</div>
-          <form className="settings__form" onSubmit={handleTripSave}>
-            <label className="field">
-              <span>Title</span>
-              <input
-                type="text"
-                placeholder={trip.title}
-                value={titleInput}
-                onChange={(event) => setTitleInput(event.target.value)}
-              />
-            </label>
-            <label className="field">
-              <span>Start date</span>
-              <input
-                type="date"
-                value={startDateInput}
-                onChange={(event) => setStartDateInput(event.target.value)}
-              />
-            </label>
-            <label className="field">
-              <span>End date</span>
-              <input
-                type="date"
-                value={endDateInput}
-                onChange={(event) => setEndDateInput(event.target.value)}
-              />
-            </label>
-            {tripError && <div className="status status--error">{tripError}</div>}
-            <button className="primary" type="submit" disabled={savingTrip}>
-              {savingTrip ? "Saving..." : "Update Trip"}
+          <div className="settings__header">
+            <div className="section-title">Trip settings</div>
+            <button
+              className="settings__toggle"
+              type="button"
+              onClick={() => setSettingsOpen((prev) => !prev)}
+            >
+              {settingsOpen ? "Hide" : "Edit"}
             </button>
-          </form>
+          </div>
+          {!settingsOpen && (
+            <div className="settings__summary">
+              <div>{trip.title}</div>
+              <div>{trip.start_date} - {trip.end_date}</div>
+              <div>Base: {trip.base_currency}</div>
+              <div>Rate: {trip.rate_to_jpy}</div>
+            </div>
+          )}
+          {settingsOpen && (
+            <form className="settings__form" onSubmit={handleTripSave}>
+              <label className="field">
+                <span>Title</span>
+                <input
+                  type="text"
+                  placeholder={trip.title}
+                  value={titleInput}
+                  onChange={(event) => setTitleInput(event.target.value)}
+                />
+              </label>
+              <label className="field">
+                <span>Start date</span>
+                <input
+                  type="date"
+                  value={startDateInput}
+                  onChange={(event) => setStartDateInput(event.target.value)}
+                />
+              </label>
+              <label className="field">
+                <span>End date</span>
+                <input
+                  type="date"
+                  value={endDateInput}
+                  onChange={(event) => setEndDateInput(event.target.value)}
+                />
+              </label>
+              {tripError && <div className="status status--error">{tripError}</div>}
+              <button className="primary" type="submit" disabled={savingTrip}>
+                {savingTrip ? "Saving..." : "Update Trip"}
+              </button>
+            </form>
+          )}
 
-          <div className="settings__divider" />
+          {settingsOpen && <div className="settings__divider" />}
 
-          <form className="settings__form" onSubmit={handleRateSave}>
-            <label className="field">
-              <span>Base currency</span>
-              <input type="text" value={trip.base_currency} disabled />
-            </label>
-            <label className="field">
-              <span>Rate to JPY</span>
-              <input
-                type="number"
-                step="0.01"
-                placeholder={String(trip.rate_to_jpy)}
-                value={rateInput}
-                onChange={(event) => setRateInput(event.target.value)}
-              />
-            </label>
-            {rateError && <div className="status status--error">{rateError}</div>}
-            <button className="primary" type="submit" disabled={savingRate}>
-              {savingRate ? "Saving..." : "Update Rate"}
-            </button>
-          </form>
+          {settingsOpen && (
+            <form className="settings__form" onSubmit={handleRateSave}>
+              <label className="field">
+                <span>Base currency</span>
+                <input type="text" value={trip.base_currency} disabled />
+              </label>
+              <label className="field">
+                <span>Rate to JPY</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder={String(trip.rate_to_jpy)}
+                  value={rateInput}
+                  onChange={(event) => setRateInput(event.target.value)}
+                />
+              </label>
+              {rateError && <div className="status status--error">{rateError}</div>}
+              <button className="primary" type="submit" disabled={savingRate}>
+                {savingRate ? "Saving..." : "Update Rate"}
+              </button>
+            </form>
+          )}
         </section>
       )}
 
