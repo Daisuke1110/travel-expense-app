@@ -379,3 +379,16 @@ a {
 .danger:hover {
   background: #ffe9e9;
 }
+
+.settings {
+  margin-bottom: 14px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--stroke);
+  background: #fff;
+}
+
+.settings__form {
+  display: grid;
+  gap: 12px;
+}

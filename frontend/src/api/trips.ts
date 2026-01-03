@@ -35,6 +35,15 @@ export type TripCreateRequest = {
   rate_to_jpy: number;
 };
 
+export type TripUpdateRequest = {
+  title?: string;
+  country?: string;
+  start_date?: string;
+  end_date?: string;
+  rate_to_jpy?: number;
+  base_currency?: string;
+};
+
 export function fetchMyTrips() {
   return apiFetch<TripsResponse>("/me/trips");
 }
@@ -46,6 +55,13 @@ export function fetchTripDetail(tripId: string) {
 export function createTrip(payload: TripCreateRequest) {
   return apiFetch<TripDetail>("/trips", {
     method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateTrip(tripId: string, payload: TripUpdateRequest) {
+  return apiFetch<TripDetail>(`/trips/${tripId}`, {
+    method: "PATCH",
     body: JSON.stringify(payload),
   });
 }

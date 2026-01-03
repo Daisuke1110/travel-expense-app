@@ -1,8 +1,8 @@
-﻿import { useMemo } from "react";
+﻿import { FormEvent, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import ExpenseItemCard from "../components/ExpenseItem";
 import SummaryBox from "../components/SummaryBox";
-import { deleteTrip } from "../api/trips";
+import { deleteTrip, updateTrip } from "../api/trips";
 import { useExpenses } from "../hooks/useExpenses";
 import { useTrip } from "../hooks/useTrip";
 
@@ -13,6 +13,9 @@ export default function TripDetailPage() {
   const navigate = useNavigate();
   const tripState = useTrip(tripId);
   const expenseState = useExpenses(tripId);
+  const [rateInput, setRateInput] = useState("");
+  const [rateError, setRateError] = useState<string | null>(null);
+  const [savingRate, setSavingRate] = useState(false);
 
   const totals = useMemo(() => {
     const totalAmount = expenseState.data.reduce((sum, item) => sum + item.amount, 0);
@@ -22,6 +25,7 @@ export default function TripDetailPage() {
   }, [expenseState.data, tripState.data]);
 
   const canDelete = tripState.data?.owner_id && tripState.data.owner_id === debugUserId;
+  const canEditRate = canDelete;
 
   const handleDelete = async () => {
     if (!tripState.data) return;
@@ -29,6 +33,31 @@ export default function TripDetailPage() {
     if (!ok) return;
     await deleteTrip(tripState.data.trip_id);
     navigate("/");
+  };
+
+  const handleRateSave = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!tripState.data) return;
+
+    const parsed = Number(rateInput);
+    if (!Number.isFinite(parsed) || Number.isInteger(parsed)) {
+      setRateError("Rate must be a decimal number.");
+      return;
+    }
+
+    setRateError(null);
+    setSavingRate(true);
+    try {
+      const updated = await updateTrip(tripState.data.trip_id, {
+        rate_to_jpy: parsed,
+      });
+      tripState.data.rate_to_jpy = updated.rate_to_jpy;
+      setRateInput("");
+    } catch (err) {
+      setRateError((err as Error).message ?? "Failed to update rate");
+    } finally {
+      setSavingRate(false);
+    }
   };
 
   if (tripState.loading) {
@@ -64,6 +93,32 @@ export default function TripDetailPage() {
         totalYen={totals.totalYen}
         rateToJpy={trip.rate_to_jpy}
       />
+
+      {canEditRate && (
+        <section className="settings">
+          <div className="section-title">Rate settings</div>
+          <form className="settings__form" onSubmit={handleRateSave}>
+            <label className="field">
+              <span>Base currency</span>
+              <input type="text" value={trip.base_currency} disabled />
+            </label>
+            <label className="field">
+              <span>Rate to JPY</span>
+              <input
+                type="number"
+                step="0.01"
+                placeholder={String(trip.rate_to_jpy)}
+                value={rateInput}
+                onChange={(event) => setRateInput(event.target.value)}
+              />
+            </label>
+            {rateError && <div className="status status--error">{rateError}</div>}
+            <button className="primary" type="submit" disabled={savingRate}>
+              {savingRate ? "Saving..." : "Update Rate"}
+            </button>
+          </form>
+        </section>
+      )}
 
       {canDelete && (
         <button className="danger" onClick={handleDelete}>Delete Trip</button>
