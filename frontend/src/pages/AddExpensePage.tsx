@@ -34,8 +34,8 @@ export default function AddExpensePage() {
     if (!tripId || !currency) return;
 
     const parsed = Number(amount);
-    if (!Number.isInteger(parsed) || parsed <= 0) {
-      setError("Amount must be a positive integer.");
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      setError("Amount must be a positive number.");
       return;
     }
 
@@ -104,7 +104,7 @@ export default function AddExpensePage() {
               type="number"
               inputMode="numeric"
               min="1"
-              step="1"
+              step="0.01"
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
               required

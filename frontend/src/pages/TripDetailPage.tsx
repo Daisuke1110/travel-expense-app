@@ -51,8 +51,8 @@ export default function TripDetailPage() {
     if (!tripState.data) return;
 
     const parsed = Number(rateInput);
-    if (!Number.isFinite(parsed) || Number.isInteger(parsed)) {
-      setRateError("Rate must be a decimal number.");
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      setRateError("Rate must be a positive number.");
       return;
     }
 

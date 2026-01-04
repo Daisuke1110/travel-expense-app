@@ -32,8 +32,8 @@ export default function AddTripPage() {
     }
 
     const parsedRate = Number(rateToJpy);
-    if (!Number.isFinite(parsedRate) || Number.isInteger(parsedRate)) {
-      setError("Rate to JPY must be a decimal number.");
+    if (!Number.isFinite(parsedRate) || parsedRate <= 0) {
+      setError("Rate to JPY must be a positive number.");
       return;
     }
 

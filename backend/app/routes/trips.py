@@ -57,7 +57,7 @@ class ExpenseItem(BaseModel):
     expense_id: str
     trip_id: str
     user_id: str
-    amount: int
+    amount: float
     currency: str
     category: Optional[str] = None
     note: Optional[str] = None
@@ -247,8 +247,8 @@ def _parse_rate_to_jpy(value) -> Decimal:
         raise HTTPException(
             status_code=400, detail="rate_to_jpy must be decimal"
         ) from exc
-    if dec == dec.to_integral_value():
-        raise HTTPException(status_code=400, detail="rate_to_jpy must be decimal")
+    if not dec.is_finite():
+        raise HTTPException(status_code=400, detail="rate_to_jpy must be number")
     return dec
 
 
@@ -309,16 +309,16 @@ def _delete_expenses_by_trip_id(dynamodb, table_name: str, trip_id: str):
             break
 
 
-def _parse_amount_int(value) -> int:
+def _parse_amount_number(value) -> Decimal:
     if isinstance(value, bool):
-        raise HTTPException(status_code=400, detail="amount must be integer")
+        raise HTTPException(status_code=400, detail="amount must be a number")
     try:
         dec = Decimal(str(value))
     except (InvalidOperation, TypeError, ValueError) as exc:
-        raise HTTPException(status_code=400, detail="amount must be integer") from exc
-    if dec != dec.to_integral_value():
-        raise HTTPException(status_code=400, detail="amount must be integer")
-    return int(dec)
+        raise HTTPException(status_code=400, detail="amount must be a number") from exc
+    if not dec.is_finite() or dec <= 0:
+        raise HTTPException(status_code=400, detail="amount must be a positive number")
+    return dec
 
 
 def _parse_datetime_utc(value: str) -> str:
@@ -561,7 +561,7 @@ def list_expenses(
                     expense_id=item.get("expense_id", ""),
                     trip_id=item.get("trip_id", ""),
                     user_id=item.get("user_id", ""),
-                    amount=_as_int(item.get("amount", 0)),
+                    amount=_as_float(item.get("amount", 0)),
                     currency=item.get("currency", ""),
                     category=item.get("category"),
                     note=item.get("note"),
@@ -882,7 +882,7 @@ def create_expense(
                 status_code=400, detail="currency must match base_currency"
             )
 
-        amount = _parse_amount_int(req.amount)
+        amount = _parse_amount_number(req.amount)
         datetime_value = _parse_datetime_utc(req.datetime)
 
         expense_id = str(uuid.uuid4())
@@ -895,7 +895,7 @@ def create_expense(
             "expense_id": expense_id,
             "datetime": datetime_value,
             "user_id": user_id,
-            "amount": Decimal(amount),
+            "amount": amount,
             "currency": req.currency,
             "category": req.category,
             "note": req.note,
@@ -908,7 +908,7 @@ def create_expense(
             expense_id=expense_id,
             trip_id=trip_id,
             user_id=user_id,
-            amount=amount,
+            amount=_as_float(amount),
             currency=req.currency,
             category=req.category,
             note=req.note,
@@ -950,7 +950,7 @@ def update_expense(
 
         update_values: dict[str, object] = {}
         if req.amount is not None:
-            update_values["amount"] = Decimal(_parse_amount_int(req.amount))
+            update_values["amount"] = _parse_amount_number(req.amount)
         if req.currency is not None:
             update_values["currency"] = req.currency
         if req.category is not None:
@@ -1020,7 +1020,7 @@ def update_expense(
             expense_id=updated.get("expense_id", ""),
             trip_id=updated.get("trip_id", ""),
             user_id=updated.get("user_id", ""),
-            amount=_as_int(updated.get("amount", 0)),
+            amount=_as_float(updated.get("amount", 0)),
             currency=updated.get("currency", ""),
             category=updated.get("category"),
             note=updated.get("note"),
