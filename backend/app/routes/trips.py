@@ -42,6 +42,17 @@ class TripDetail(BaseModel):
     owner_name: Optional[str] = None
 
 
+class TripMemberItem(BaseModel):
+    user_id: str
+    trip_id: str
+    role: str
+    joined_at: Optional[str] = None
+
+
+class TripMembersResponse(BaseModel):
+    members: List[TripMemberItem]
+
+
 class ExpenseItem(BaseModel):
     expense_id: str
     trip_id: str
@@ -446,6 +457,30 @@ def _query_trip_members(dynamodb, table_name: str, user_id: str) -> List[dict]:
     return items
 
 
+def _query_trip_members_by_trip_id(
+    dynamodb, table_name: str, trip_id: str, index_name: str = "GSI1"
+) -> List[dict]:
+    table = dynamodb.Table(table_name)
+    items: List[dict] = []
+    last_evaluated_key = None
+
+    while True:
+        params = {
+            "IndexName": index_name,
+            "KeyConditionExpression": Key("trip_id").eq(trip_id),
+        }
+        if last_evaluated_key:
+            params["ExclusiveStartKey"] = last_evaluated_key
+
+        response = table.query(**params)
+        items.extend(response.get("Items", []))
+        last_evaluated_key = response.get("LastEvaluatedKey")
+        if not last_evaluated_key:
+            break
+
+    return items
+
+
 @router.get("/trips/{trip_id}", response_model=TripDetail)
 def get_trip_detail(
     trip_id: str = Path(..., description="Trip ID"),
@@ -700,6 +735,49 @@ def delete_trip(
         raise HTTPException(status_code=500, detail="Unexpected error") from exc
 
 
+@router.get("/trips/{trip_id}/members", response_model=TripMembersResponse)
+def list_trip_members(
+    trip_id: str = Path(..., description="Trip ID"),
+    x_debug_user_id: str | None = Header(default=None),
+):
+    """
+    List members for a trip. Only members can view.
+    """
+    user_id = _get_user_id(x_debug_user_id)
+    tables = get_table_names()
+    dynamodb = get_dynamodb_resource()
+
+    try:
+        _get_trip_or_404(dynamodb, tables["trips"], trip_id)
+        _ensure_member_or_forbid(dynamodb, tables["trip_members"], user_id, trip_id)
+
+        members = _query_trip_members_by_trip_id(
+            dynamodb=dynamodb,
+            table_name=tables["trip_members"],
+            trip_id=trip_id,
+        )
+
+        return TripMembersResponse(
+            members=[
+                TripMemberItem(
+                    user_id=item.get("user_id", ""),
+                    trip_id=item.get("trip_id", ""),
+                    role=item.get("role", ""),
+                    joined_at=item.get("joined_at"),
+                )
+                for item in members
+            ]
+        )
+    except HTTPException:
+        raise
+    except (ClientError, BotoCoreError) as exc:
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch trip members"
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Unexpected error") from exc
+
+
 @router.post("/trips/{trip_id}/members", response_model=TripMemberResponse)
 def add_member(
     trip_id: str = Path(..., description="Trip_ID"),
@@ -744,6 +822,45 @@ def add_member(
         raise HTTPException(status_code=500, detail="Failed to add member") from exc
     except BotoCoreError as exc:
         raise HTTPException(status_code=500, detail="Failed to add member")
+
+
+@router.delete("/trips/{trip_id}/members/{member_user_id}", status_code=204)
+def delete_trip_member(
+    trip_id: str = Path(..., description="Trip ID"),
+    member_user_id: str = Path(..., description="Member user ID"),
+    x_debug_user_id: str | None = Header(default=None),
+):
+    """
+    Remove a member from a trip. Only owner can delete members.
+    """
+    user_id = _get_user_id(x_debug_user_id)
+    tables = get_table_names()
+    dynamodb = get_dynamodb_resource()
+
+    try:
+        _get_trip_or_404(dynamodb, tables["trips"], trip_id)
+        _ensure_owner(dynamodb, tables["trip_members"], user_id, trip_id)
+
+        res = dynamodb.Table(tables["trip_members"]).get_item(
+            Key={"user_id": member_user_id, "trip_id": trip_id}
+        )
+        item = res.get("Item")
+        if not item:
+            raise HTTPException(status_code=404, detail="Member not found")
+        if item.get("role") == "owner":
+            raise HTTPException(status_code=400, detail="Owner cannot be removed")
+
+        dynamodb.Table(tables["trip_members"]).delete_item(
+            Key={"user_id": member_user_id, "trip_id": trip_id}
+        )
+    except HTTPException:
+        raise
+    except (ClientError, BotoCoreError) as exc:
+        raise HTTPException(
+            status_code=500, detail="Failed to delete trip member"
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Unexpected error") from exc
 
 
 @router.post("/trips/{trip_id}/expenses", response_model=ExpenseItem)
