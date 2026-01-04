@@ -55,6 +55,10 @@ export type TripMemberResponse = {
   joined_at: string;
 };
 
+export type TripMembersResponse = {
+  members: TripMemberResponse[];
+};
+
 export function fetchMyTrips() {
   return apiFetch<TripsResponse>("/me/trips");
 }
@@ -85,5 +89,15 @@ export function addTripMember(tripId: string, payload: TripMemberRequest) {
   return apiFetch<TripMemberResponse>(`/trips/${tripId}/members`, {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+
+export function fetchTripMembers(tripId: string) {
+  return apiFetch<TripMembersResponse>(`/trips/${tripId}/members`);
+}
+
+export function deleteTripMember(tripId: string, memberUserId: string) {
+  return apiFetch<void>(`/trips/${tripId}/members/${memberUserId}`, {
+    method: "DELETE",
   });
 }

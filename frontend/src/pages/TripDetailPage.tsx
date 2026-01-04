@@ -4,6 +4,7 @@ import ExpenseItemCard from "../components/ExpenseItem";
 import SummaryBox from "../components/SummaryBox";
 import { addTripMember, deleteTrip, updateTrip } from "../api/trips";
 import { useExpenses } from "../hooks/useExpenses";
+import { useMembers } from "../hooks/useMembers";
 import { useTrip } from "../hooks/useTrip";
 
 const debugUserId = import.meta.env.VITE_DEBUG_USER_ID ?? "";
@@ -13,6 +14,7 @@ export default function TripDetailPage() {
   const navigate = useNavigate();
   const tripState = useTrip(tripId);
   const expenseState = useExpenses(tripId);
+  const memberState = useMembers(tripId);
   const [rateInput, setRateInput] = useState("");
   const [rateError, setRateError] = useState<string | null>(null);
   const [savingRate, setSavingRate] = useState(false);
@@ -117,6 +119,7 @@ export default function TripDetailPage() {
     try {
       await addTripMember(tripState.data.trip_id, { user_id: userId });
       setMemberUserId("");
+      await memberState.refresh();
     } catch (err) {
       setMemberError((err as Error).message ?? "Failed to add member");
     } finally {
@@ -176,6 +179,33 @@ export default function TripDetailPage() {
               <div>{trip.start_date} - {trip.end_date}</div>
               <div>Base: {trip.base_currency}</div>
               <div>Rate: {trip.rate_to_jpy}</div>
+              <div className="settings__members">
+                <div className="settings__label">Members</div>
+                {memberState.loading && <div className="status">Loading members...</div>}
+                {memberState.error && (
+                  <div className="status status--error">{memberState.error}</div>
+                )}
+                {!memberState.loading && memberState.data.length === 0 && (
+                  <div className="empty">No members yet.</div>
+                )}
+                <div className="members-list">
+                  {memberState.data.map((member) => (
+                    <div key={member.user_id} className="members-list__item">
+                      <span className="members-list__user">{member.user_id}</span>
+                      <span className="members-list__role">{member.role}</span>
+                      {canDelete && member.role !== "owner" && (
+                        <button
+                          className="members-list__delete"
+                          type="button"
+                          onClick={() => memberState.remove(member.user_id)}
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
           {settingsOpen && (

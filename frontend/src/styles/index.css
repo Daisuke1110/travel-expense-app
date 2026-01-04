@@ -443,3 +443,52 @@ a {
   color: var(--muted);
   font-size: 13px;
 }
+
+.settings__members {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.settings__label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.members-list {
+  display: grid;
+  gap: 6px;
+}
+
+.members-list__item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px dashed var(--stroke);
+  background: #fffdf8;
+}
+
+.members-list__user {
+  font-size: 13px;
+  color: var(--ink);
+  word-break: break-all;
+}
+
+.members-list__role {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.members-list__delete {
+  background: transparent;
+  border: none;
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
