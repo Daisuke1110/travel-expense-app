@@ -266,6 +266,22 @@ a {
   cursor: pointer;
 }
 
+.expense-card__actions {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.expense-card__edit {
+  background: transparent;
+  border: 1px solid var(--stroke);
+  color: var(--ink);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 10px;
+}
+
 .expense-card__meta {
   display: flex;
   justify-content: space-between;
@@ -276,6 +292,17 @@ a {
 .expense-card__note {
   font-size: 13px;
   color: var(--ink);
+}
+
+.expense-card__form {
+  display: grid;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.expense-card__buttons {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .muted {

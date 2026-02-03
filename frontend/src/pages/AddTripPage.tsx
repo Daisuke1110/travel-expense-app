@@ -1,6 +1,18 @@
-﻿import { type FormEvent, useState } from "react";
+﻿import { type FormEvent, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createTrip } from "../api/trips";
+
+const COUNTRIES = [
+  { code: "JP", label: "Japan", currency: "JPY" },
+  { code: "US", label: "United States", currency: "USD" },
+  { code: "GB", label: "United Kingdom", currency: "GBP" },
+  { code: "EU", label: "Eurozone", currency: "EUR" },
+  { code: "KR", label: "Korea", currency: "KRW" },
+  { code: "TH", label: "Thailand", currency: "THB" },
+  { code: "SG", label: "Singapore", currency: "SGD" },
+  { code: "AU", label: "Australia", currency: "AUD" },
+  { code: "CA", label: "Canada", currency: "CAD" },
+];
 
 function isUpper3(value: string) {
   return /^[A-Z]{3}$/.test(value);
@@ -16,6 +28,40 @@ export default function AddTripPage() {
   const [rateToJpy, setRateToJpy] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [rateLoading, setRateLoading] = useState(false);
+  const [rateError, setRateError] = useState<string | null>(null);
+
+  const apiKey = import.meta.env.VITE_EXCHANGE_RATE_API_KEY ?? "";
+  const selectedCountry = useMemo(
+    () => COUNTRIES.find((item) => item.code === country) ?? null,
+    [country]
+  );
+
+  const fetchRate = async (currency: string) => {
+    if (!apiKey) {
+      setRateError("Missing exchange rate API key.");
+      return;
+    }
+    setRateLoading(true);
+    setRateError(null);
+    try {
+      const res = await fetch(
+        `https://v6.exchangerate-api.com/v6/${apiKey}/pair/${currency}/JPY`
+      );
+      if (!res.ok) {
+        throw new Error(`Rate API error: ${res.status}`);
+      }
+      const data = await res.json();
+      if (data.result !== "success" || typeof data.conversion_rate !== "number") {
+        throw new Error("Failed to fetch rate.");
+      }
+      setRateToJpy(String(data.conversion_rate));
+    } catch (err) {
+      setRateError((err as Error).message ?? "Failed to fetch rate.");
+    } finally {
+      setRateLoading(false);
+    }
+  };
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -74,7 +120,30 @@ export default function AddTripPage() {
 
           <label className="field">
             <span>Country</span>
-            <input value={country} onChange={(e) => setCountry(e.target.value)} required />
+            <select
+              value={country}
+              onChange={(e) => {
+                const code = e.target.value;
+                setCountry(code);
+                const match = COUNTRIES.find((item) => item.code === code);
+                if (match) {
+                  setBaseCurrency(match.currency);
+                  fetchRate(match.currency);
+                } else {
+                  setBaseCurrency("");
+                }
+              }}
+              required
+            >
+              <option value="" disabled>
+                Select country
+              </option>
+              {COUNTRIES.map((item) => (
+                <option key={item.code} value={item.code}>
+                  {item.label} ({item.code})
+                </option>
+              ))}
+            </select>
           </label>
 
           <label className="field">
@@ -89,7 +158,7 @@ export default function AddTripPage() {
 
           <label className="field">
             <span>Base currency</span>
-            <input value={baseCurrency} onChange={(e) => setBaseCurrency(e.target.value.toUpperCase())} required />
+            <input value={baseCurrency} readOnly />
           </label>
 
           <label className="field">
@@ -103,6 +172,8 @@ export default function AddTripPage() {
             />
           </label>
 
+          {rateLoading && <div className="status">Fetching rate...</div>}
+          {rateError && <div className="status status--error">{rateError}</div>}
           {error && <div className="status status--error">{error}</div>}
 
           <button className="primary" type="submit" disabled={saving}>

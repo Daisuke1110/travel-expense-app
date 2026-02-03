@@ -1,5 +1,5 @@
 ﻿import { useCallback, useEffect, useState } from "react";
-import { deleteExpense, fetchTripExpenses } from "../api/expenses";
+import { deleteExpense, fetchTripExpenses, updateExpense, type ExpenseUpdateRequest } from "../api/expenses";
 import type { ExpenseItem } from "../api/expenses";
 
 export function useExpenses(tripId: string | undefined) {
@@ -52,5 +52,20 @@ export function useExpenses(tripId: string | undefined) {
     [tripId, refresh]
   );
 
-  return { data, error, loading, refresh, remove };
+  const update = useCallback(
+    async (expenseId: string, payload: ExpenseUpdateRequest) => {
+      if (!tripId) return;
+      const updated = await updateExpense(tripId, expenseId, payload);
+      setData((prev) => {
+        const next = prev.map((item) =>
+          item.expense_id === expenseId ? updated : item
+        );
+        next.sort((a, b) => a.datetime.localeCompare(b.datetime));
+        return next;
+      });
+    },
+    [tripId]
+  );
+
+  return { data, error, loading, refresh, remove, update };
 }

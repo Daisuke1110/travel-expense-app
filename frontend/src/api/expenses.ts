@@ -25,6 +25,13 @@ export type ExpenseCreateRequest = {
   datetime: string;
 };
 
+export type ExpenseUpdateRequest = {
+  amount?: number;
+  category?: string;
+  note?: string;
+  datetime?: string;
+};
+
 export function fetchTripExpenses(tripId: string) {
   return apiFetch<ExpensesResponse>(`/trips/${tripId}/expenses`);
 }
@@ -39,5 +46,12 @@ export function createExpense(tripId: string, payload: ExpenseCreateRequest) {
 export function deleteExpense(tripId: string, expenseId: string) {
   return apiFetch<void>(`/trips/${tripId}/expenses/${expenseId}`, {
     method: "DELETE",
+  });
+}
+
+export function updateExpense(tripId: string, expenseId: string, payload: ExpenseUpdateRequest) {
+  return apiFetch<ExpenseItem>(`/trips/${tripId}/expenses/${expenseId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
   });
 }

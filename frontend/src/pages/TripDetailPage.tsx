@@ -309,6 +309,7 @@ export default function TripDetailPage() {
               item={item}
               rateToJpy={trip.rate_to_jpy}
               onDelete={expenseState.remove}
+              onUpdate={expenseState.update}
             />
           ))}
         </div>
