@@ -6,7 +6,11 @@ app = FastAPI(title="Travel Expense App API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://172.19.0.4:5173",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -19,7 +23,11 @@ async def add_charset_to_json(request, call_next):
     """
     response = await call_next(request)
     content_type = response.headers.get("content-type")
-    if content_type and content_type.startswith("application/json") and "charset" not in content_type.lower():
+    if (
+        content_type
+        and content_type.startswith("application/json")
+        and "charset" not in content_type.lower()
+    ):
         response.headers["content-type"] = "application/json; charset=utf-8"
     return response
 

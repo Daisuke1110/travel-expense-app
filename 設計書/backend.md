@@ -1,4 +1,4 @@
-# API 設計 / MVP
+﻿# API 設計 / MVP
 
 Travel Expense App のバックエンド API 仕様（MVP）。  
 - フレームワーク: FastAPI + Python  

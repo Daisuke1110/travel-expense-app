@@ -1,0 +1,29 @@
+name: travel-expense
+services:
+  dynamodb:
+    image: amazon/dynamodb-local
+    ports:
+      - "8001:8000"
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      DYNAMODB_ENDPOINT: http://dynamodb:8000
+      AWS_REGION: ap-northeast-1
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+    ports:
+      - "8000:8000"
+    depends_on:
+      - dynamodb
+
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
