@@ -27,3 +27,16 @@ services:
       - "5173:5173"
     depends_on:
       - backend
+
+  seed:
+    build:
+      context: ./backend
+    depends_on:
+    - dynamodb
+    environment:
+      DYNAMODB_ENDPOINT: http://dynamodb:8000
+      AWS_REGION: ap-northeast-1
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+    command: ["sh", "-c", "python scripts/seed_local.py"]
+    restart: "no"

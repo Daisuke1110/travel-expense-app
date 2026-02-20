@@ -1,4 +1,4 @@
-﻿import { type FormEvent, useMemo, useState } from "react";
+﻿import { type FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createTrip } from "../api/trips";
 
@@ -32,10 +32,10 @@ export default function AddTripPage() {
   const [rateError, setRateError] = useState<string | null>(null);
 
   const apiKey = import.meta.env.VITE_EXCHANGE_RATE_API_KEY ?? "";
-  const selectedCountry = useMemo(
-    () => COUNTRIES.find((item) => item.code === country) ?? null,
-    [country]
-  );
+  // const selectedCountry = useMemo(
+  //   () => COUNTRIES.find((item) => item.code === country) ?? null,
+  //   [country]
+  // );
 
   const fetchRate = async (currency: string) => {
     if (!apiKey) {
