@@ -22,6 +22,10 @@ module "backend" {
   expenses_table     = module.database.expenses_table_name
 
   cors_allowed_origins = var.cors_allowed_origins
+
+  enable_jwt_authorizer = var.enable_jwt_authorizer
+  jwt_issuer            = module.cognito.issuer
+  jwt_audience          = [module.cognito.user_pool_client_id]
 }
 
 module "frontend" {
@@ -54,4 +58,14 @@ module "dns" {
   cloudfront_domain_name = module.frontend.cloudfront_domain_name
   api_domain_name        = module.backend.api_domain_name
   api_domain_zone_id     = module.backend.api_domain_zone_id
+}
+
+module "cognito" {
+  source = "./modules/cognito"
+
+  project_name  = var.project_name
+  stage         = var.stage
+  domain_prefix = var.cognito_domain_prefix
+  callback_urls = var.cognito_callback_urls
+  logout_urls   = var.cognito_logout_urls
 }

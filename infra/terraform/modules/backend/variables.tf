@@ -71,3 +71,15 @@ variable "acm_certificate_arn" {
   type        = string
   description = "ACM cert ARN in API region for API Gateway"
 }
+
+variable "enable_jwt_authorizer" {
+  type = bool
+}
+
+variable "jwt_issuer" {
+  type = string
+}
+
+variable "jwt_audience" {
+  type = list(string)
+}

@@ -64,3 +64,20 @@ variable "lambda_handler" {
   type        = string
   description = "Lambda handler (e.g. app.lambda.handler)"
 }
+
+variable "enable_jwt_authorizer" {
+  type    = bool
+  default = false
+}
+
+variable "cognito_domain_prefix" {
+  type = string
+}
+
+variable "cognito_callback_urls" {
+  type = list(string)
+}
+
+variable "cognito_logout_urls" {
+  type = list(string)
+}

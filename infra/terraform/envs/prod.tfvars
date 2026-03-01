@@ -10,6 +10,10 @@ account_id                    = 804878519476
 cors_allowed_origins = [
   "https://travel-expense.daisuke-selfstudy.com"
 ]
-enable_pitr         = true
-lambda_package_path = "C:/travel-expense-app/backend/lambda.zip"
-lambda_handler      = "app.lambda.handler"
+enable_pitr           = true
+lambda_package_path   = "C:/travel-expense-app/backend/lambda.zip"
+lambda_handler        = "app.lambda.handler"
+enable_jwt_authorizer = true
+cognito_domain_prefix = "travel-expense-prod-auth"
+cognito_callback_urls = ["https://travel-expense.daisuke-selfstudy.com"]
+cognito_logout_urls   = ["https://travel-expense.daisuke-selfstudy.com"]

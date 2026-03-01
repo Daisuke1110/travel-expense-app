@@ -11,6 +11,10 @@ cors_allowed_origins = [
   "https://travel-expense-dev.daisuke-selfstudy.com",
   "http://localhost:5173"
 ]
-enable_pitr         = false
-lambda_package_path = "C:/travel-expense-app/backend/lambda.zip"
-lambda_handler      = "app.lambda.handler"
+enable_pitr           = false
+lambda_package_path   = "C:/travel-expense-app/backend/lambda.zip"
+lambda_handler        = "app.lambda.handler"
+enable_jwt_authorizer = false
+cognito_domain_prefix = "travel-expense-dev-auth"
+cognito_callback_urls = ["http://localhost:5173", "https://travel-expense-dev.daisuke-selfstudy.com"]
+cognito_logout_urls   = ["http://localhost:5173", "https://travel-expense-dev.daisuke-selfstudy.com"]
