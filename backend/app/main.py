@@ -1,6 +1,7 @@
 ﻿from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes import trips
+from app import auth
 
 app = FastAPI(title="Travel Expense App API", version="0.1.0")
 
@@ -31,6 +32,15 @@ async def add_charset_to_json(request, call_next):
     ):
         response.headers["content-type"] = "application/json; charset=utf-8"
     return response
+
+
+@app.middleware("http")
+async def bind_user_context(request, call_next):
+    token = auth.set_current_user_from_request(request)
+    try:
+        return await call_next(request)
+    finally:
+        auth.reset_current_user(token)
 
 
 app.include_router(trips.router)

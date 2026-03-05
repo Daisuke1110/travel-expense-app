@@ -82,10 +82,12 @@ resource "aws_lambda_function" "api" {
 
   environment {
     variables = {
-      TRIPS_TABLE        = var.trips_table
-      TRIP_MEMBERS_TABLE = var.trip_members_table
-      USERS_TABLE        = var.users_table
-      EXPENSES_TABLE     = var.expenses_table
+      TRIPS_TABLE             = var.trips_table
+      TRIP_MEMBERS_TABLE      = var.trip_members_table
+      USERS_TABLE             = var.users_table
+      EXPENSES_TABLE          = var.expenses_table
+      APP_ENV                 = var.stage
+      ALLOW_DEBUG_USER_HEADER = var.stage == "prod" ? "false" : "true"
     }
   }
   tags = local.tags

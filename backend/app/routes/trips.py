@@ -11,6 +11,7 @@ import uuid
 import re
 
 from app.db import get_dynamodb_resource, get_table_names
+from app import auth
 
 router = APIRouter()
 
@@ -121,11 +122,7 @@ _CURRENCY_RE = re.compile(r"^[A-Z]{3}$")
 
 ## 関数一覧
 def _get_user_id(x_debug_user_id: str | None) -> str:
-    if not x_debug_user_id:
-        raise HTTPException(
-            status_code=401, detail="X-Debug-User-Id header is required in MVP mode"
-        )
-    return x_debug_user_id
+    return auth.resolve_user_id(x_debug_user_id)
 
 
 def _batch_get_items(
