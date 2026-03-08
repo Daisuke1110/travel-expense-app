@@ -7,7 +7,18 @@ import { useExpenses } from "../hooks/useExpenses";
 import { useMembers } from "../hooks/useMembers";
 import { useTrip } from "../hooks/useTrip";
 
-const debugUserId = import.meta.env.VITE_DEBUG_USER_ID ?? "";
+function getCurrentUserId(): string {
+  const token = localStorage.getItem("id_token");
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      return payload.sub ?? "";
+    } catch {
+      return "";
+    }
+  }
+  return import.meta.env.VITE_DEBUG_USER_ID ?? "";
+}
 
 export default function TripDetailPage() {
   const { tripId } = useParams();
@@ -35,7 +46,8 @@ export default function TripDetailPage() {
     return { totalAmount, totalYen };
   }, [expenseState.data, tripState.data]);
 
-  const canDelete = tripState.data?.owner_id && tripState.data.owner_id === debugUserId;
+  const currentUserId = getCurrentUserId();
+  const canDelete = !!tripState.data?.owner_id && tripState.data.owner_id === currentUserId;
   const canEditRate = canDelete;
 
   const handleDelete = async () => {

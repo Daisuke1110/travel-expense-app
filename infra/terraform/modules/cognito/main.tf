@@ -29,6 +29,12 @@ resource "aws_cognito_user_pool_client" "this" {
   logout_urls   = var.logout_urls
 
   supported_identity_providers = ["COGNITO"]
+
+  #dev検証用
+  explicit_auth_flows = [
+    "ALLOW_ADMIN_USER_PASSWORD_AUTH",
+    "ALLOW_REFRESH_TOKEN_AUTH"
+  ]
 }
 
 resource "aws_cognito_user_pool_domain" "this" {

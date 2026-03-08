@@ -100,7 +100,7 @@ resource "aws_apigatewayv2_api" "http_api" {
   cors_configuration {
     allow_origins = var.cors_allowed_origins
     allow_methods = ["GET", "POST", "PATCH", "DELETE", "OPTIONS"]
-    allow_headers = ["Content-Type", "X-Debug-User-Id"]
+    allow_headers = ["Content-Type", "X-Debug-User-Id", "Authorization"]
     max_age       = 3600
   }
   tags = local.tags
@@ -135,6 +135,21 @@ resource "aws_apigatewayv2_stage" "default" {
   auto_deploy = true
   tags        = local.tags
 }
+
+resource "aws_apigatewayv2_route" "options_proxy" {
+  api_id             = aws_apigatewayv2_api.http_api.id
+  route_key          = "OPTIONS /{proxy+}"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  authorization_type = "NONE"
+}
+
+resource "aws_apigatewayv2_route" "options_root" {
+  api_id             = aws_apigatewayv2_api.http_api.id
+  route_key          = "OPTIONS /"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  authorization_type = "NONE"
+}
+
 
 resource "aws_lambda_permission" "apigw" {
   statement_id  = "AllowAPIGatewayInvoke"
