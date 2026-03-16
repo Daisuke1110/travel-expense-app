@@ -43,6 +43,14 @@ a {
   margin-bottom: 18px;
 }
 
+.hero__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
 .hero__pill {
   display: inline-block;
   font-size: 12px;
@@ -52,6 +60,27 @@ a {
   background: #e9f2e7;
   padding: 6px 10px;
   border-radius: 999px;
+}
+
+.hero__logout {
+  appearance: none;
+  border: 1px solid rgba(31, 29, 26, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--ink);
+  padding: 8px 12px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+
+.hero__logout:hover {
+  background: #fff;
+  transform: translateY(-1px);
 }
 
 .hero__title {
@@ -88,7 +117,9 @@ a {
   border: 1px solid var(--stroke);
   border-radius: 14px;
   padding: 14px;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .trip-card:hover {

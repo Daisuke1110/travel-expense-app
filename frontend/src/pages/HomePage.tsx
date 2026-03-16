@@ -1,5 +1,6 @@
 ﻿import { Link } from "react-router-dom";
 import TripCard from "../components/TripCard";
+import { logout } from "../auth/cognito";
 import { useTrips } from "../hooks/useTrips";
 
 export default function HomePage() {
@@ -8,7 +9,16 @@ export default function HomePage() {
   return (
     <div className="page">
       <header className="hero">
-        <div className="hero__pill">Travel Expense</div>
+        <div className="hero__top">
+          <div className="hero__pill">Travel Expense</div>
+          <button
+            className="hero__logout"
+            type="button"
+            onClick={() => logout()}
+          >
+            Logout
+          </button>
+        </div>
         <h1 className="hero__title">Your Trips</h1>
         <p className="hero__sub">
           Track spending, split costs, and keep receipts tidy.
@@ -46,7 +56,9 @@ export default function HomePage() {
         </div>
       )}
 
-      <Link className="fab" to="/trips/new">+ New Trip</Link>
+      <Link className="fab" to="/trips/new">
+        + New Trip
+      </Link>
     </div>
   );
 }
