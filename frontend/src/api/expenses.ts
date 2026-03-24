@@ -4,6 +4,7 @@ export type ExpenseItem = {
   expense_id: string;
   trip_id: string;
   user_id: string;
+  paid_by_user_id: string;
   amount: number;
   currency: string;
   category?: string | null;
@@ -20,6 +21,7 @@ export type ExpensesResponse = {
 export type ExpenseCreateRequest = {
   amount: number;
   currency: string;
+  paid_by_user_id?: string;
   category?: string;
   note?: string;
   datetime: string;
@@ -27,6 +29,7 @@ export type ExpenseCreateRequest = {
 
 export type ExpenseUpdateRequest = {
   amount?: number;
+  paid_by_user_id?: string;
   category?: string;
   note?: string;
   datetime?: string;
@@ -49,7 +52,11 @@ export function deleteExpense(tripId: string, expenseId: string) {
   });
 }
 
-export function updateExpense(tripId: string, expenseId: string, payload: ExpenseUpdateRequest) {
+export function updateExpense(
+  tripId: string,
+  expenseId: string,
+  payload: ExpenseUpdateRequest,
+) {
   return apiFetch<ExpenseItem>(`/trips/${tripId}/expenses/${expenseId}`, {
     method: "PATCH",
     body: JSON.stringify(payload),

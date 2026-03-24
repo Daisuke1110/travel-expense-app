@@ -1,9 +1,18 @@
-﻿import { type FormEvent, useMemo, useState } from "react";
+﻿import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { createExpense } from "../api/expenses";
+import { getCurrentUserId } from "../auth/currentUser";
+import { useMembers } from "../hooks/useMembers";
 import { useTrip } from "../hooks/useTrip";
 
-const CATEGORIES = ["food", "transport", "hotel", "other", "shopping", "amusement"];
+const CATEGORIES = [
+  "food",
+  "transport",
+  "hotel",
+  "other",
+  "shopping",
+  "amusement",
+];
 
 function toUtcIso(datetimeLocal: string) {
   if (!datetimeLocal) return "";
@@ -15,10 +24,13 @@ export default function AddExpensePage() {
   const { tripId } = useParams();
   const navigate = useNavigate();
   const tripState = useTrip(tripId);
+  const memberState = useMembers(tripId);
+  const currentUserId = getCurrentUserId();
 
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("food");
   const [note, setNote] = useState("");
+  const [paidByUserId, setPaidByUserId] = useState(currentUserId);
   const [datetimeLocal, setDatetimeLocal] = useState(() => {
     const now = new Date();
     const offset = now.getTimezoneOffset() * 60000;
@@ -27,7 +39,25 @@ export default function AddExpensePage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const currency = useMemo(() => tripState.data?.base_currency ?? "", [tripState.data]);
+  const currency = useMemo(
+    () => tripState.data?.base_currency ?? "",
+    [tripState.data],
+  );
+  const payerOptions = memberState.data;
+
+  useEffect(() => {
+    if (payerOptions.length === 0) return;
+
+    const hasSelectedUser = payerOptions.some(
+      (member) => member.user_id === paidByUserId,
+    );
+    if (hasSelectedUser) return;
+
+    const hasCurrentUser = payerOptions.some(
+      (member) => member.user_id === currentUserId,
+    );
+    setPaidByUserId(hasCurrentUser ? currentUserId : payerOptions[0].user_id);
+  }, [currentUserId, paidByUserId, payerOptions]);
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -45,12 +75,18 @@ export default function AddExpensePage() {
       return;
     }
 
+    if (!paidByUserId) {
+      setError("Paid by is required.");
+      return;
+    }
+
     setSaving(true);
     setError(null);
     try {
       await createExpense(tripId, {
         amount: parsed,
         currency,
+        paid_by_user_id: paidByUserId,
         category,
         note: note || undefined,
         datetime,
@@ -64,14 +100,22 @@ export default function AddExpensePage() {
   };
 
   if (tripState.loading) {
-    return <div className="page"><div className="status">Loading trip...</div></div>;
+    return (
+      <div className="page">
+        <div className="status">Loading trip...</div>
+      </div>
+    );
   }
 
   if (tripState.error || !tripState.data) {
     return (
       <div className="page">
-        <div className="status status--error">{tripState.error ?? "Trip not found"}</div>
-        <Link className="back-link" to="/">Back to trips</Link>
+        <div className="status status--error">
+          {tripState.error ?? "Trip not found"}
+        </div>
+        <Link className="back-link" to="/">
+          Back to trips
+        </Link>
       </div>
     );
   }
@@ -84,7 +128,12 @@ export default function AddExpensePage() {
             <div className="modal__title">Add Expense</div>
             <div className="modal__subtitle">{tripState.data.title}</div>
           </div>
-          <Link className="modal__close" to={`/trips/${tripState.data.trip_id}`}>×</Link>
+          <Link
+            className="modal__close"
+            to={`/trips/${tripState.data.trip_id}`}
+          >
+            x
+          </Link>
         </header>
 
         <form className="modal__form" onSubmit={onSubmit}>
@@ -117,10 +166,31 @@ export default function AddExpensePage() {
           </label>
 
           <label className="field">
+            <span>Paid by</span>
+            <select
+              value={paidByUserId}
+              onChange={(event) => setPaidByUserId(event.target.value)}
+              disabled={memberState.loading || payerOptions.length === 0}
+              required
+            >
+              {payerOptions.map((member) => (
+                <option key={member.user_id} value={member.user_id}>
+                  {member.user_id}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="field">
             <span>Category</span>
-            <select value={category} onChange={(event) => setCategory(event.target.value)}>
+            <select
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
+            >
               {CATEGORIES.map((item) => (
-                <option key={item} value={item}>{item}</option>
+                <option key={item} value={item}>
+                  {item}
+                </option>
               ))}
             </select>
           </label>
@@ -135,9 +205,16 @@ export default function AddExpensePage() {
             />
           </label>
 
+          {memberState.error && (
+            <div className="status status--error">{memberState.error}</div>
+          )}
           {error && <div className="status status--error">{error}</div>}
 
-          <button className="primary" type="submit" disabled={saving}>
+          <button
+            className="primary"
+            type="submit"
+            disabled={saving || payerOptions.length === 0}
+          >
             {saving ? "Saving..." : "Save"}
           </button>
         </form>

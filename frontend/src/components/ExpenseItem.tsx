@@ -1,11 +1,16 @@
-import { type FormEvent, useState } from "react";
+﻿import { type FormEvent, useState } from "react";
 import type { ExpenseItem, ExpenseUpdateRequest } from "../api/expenses";
+import type { TripMemberResponse } from "../api/trips";
 
 type Props = {
   item: ExpenseItem;
+  members: TripMemberResponse[];
   rateToJpy: number;
   onDelete: (expenseId: string) => void;
-  onUpdate: (expenseId: string, payload: ExpenseUpdateRequest) => Promise<void> | void;
+  onUpdate: (
+    expenseId: string,
+    payload: ExpenseUpdateRequest,
+  ) => Promise<void> | void;
 };
 
 function formatDate(value: string) {
@@ -31,20 +36,37 @@ function toUtcIso(datetimeLocal: string) {
   return date.toISOString().replace(".000", "");
 }
 
-const CATEGORIES = ["food", "transport", "hotel", "other", "shopping", "amusement"];
+const CATEGORIES = [
+  "food",
+  "transport",
+  "hotel",
+  "other",
+  "shopping",
+  "amusement",
+];
 
-export default function ExpenseItemCard({ item, rateToJpy, onDelete, onUpdate }: Props) {
+export default function ExpenseItemCard({
+  item,
+  members,
+  rateToJpy,
+  onDelete,
+  onUpdate,
+}: Props) {
   const yen = item.amount * rateToJpy;
   const [editing, setEditing] = useState(false);
   const [amount, setAmount] = useState(String(item.amount));
+  const [paidByUserId, setPaidByUserId] = useState(item.paid_by_user_id);
   const [category, setCategory] = useState(item.category ?? "other");
   const [note, setNote] = useState(item.note ?? "");
-  const [datetimeLocal, setDatetimeLocal] = useState(() => toLocalInput(item.datetime));
+  const [datetimeLocal, setDatetimeLocal] = useState(() =>
+    toLocalInput(item.datetime),
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const resetForm = () => {
     setAmount(String(item.amount));
+    setPaidByUserId(item.paid_by_user_id);
     setCategory(item.category ?? "other");
     setNote(item.note ?? "");
     setDatetimeLocal(toLocalInput(item.datetime));
@@ -64,11 +86,17 @@ export default function ExpenseItemCard({ item, rateToJpy, onDelete, onUpdate }:
       return;
     }
 
+    if (!paidByUserId) {
+      setError("Paid by is required.");
+      return;
+    }
+
     setSaving(true);
     setError(null);
     try {
       await onUpdate(item.expense_id, {
         amount: parsed,
+        paid_by_user_id: paidByUserId,
         category,
         note: note || undefined,
         datetime,
@@ -111,6 +139,7 @@ export default function ExpenseItemCard({ item, rateToJpy, onDelete, onUpdate }:
         </div>
       </div>
       <div className="expense-card__meta">
+        <span className="chip">Paid by {item.paid_by_user_id}</span>
         <span className="chip">{item.category ?? "other"}</span>
         <span className="muted">{formatDate(item.datetime)}</span>
       </div>
@@ -140,10 +169,29 @@ export default function ExpenseItemCard({ item, rateToJpy, onDelete, onUpdate }:
             />
           </label>
           <label className="field">
+            <span>Paid by</span>
+            <select
+              value={paidByUserId}
+              onChange={(event) => setPaidByUserId(event.target.value)}
+              required
+            >
+              {members.map((member) => (
+                <option key={member.user_id} value={member.user_id}>
+                  {member.user_id}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
             <span>Category</span>
-            <select value={category} onChange={(event) => setCategory(event.target.value)}>
+            <select
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
+            >
               {CATEGORIES.map((value) => (
-                <option key={value} value={value}>{value}</option>
+                <option key={value} value={value}>
+                  {value}
+                </option>
               ))}
             </select>
           </label>

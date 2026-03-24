@@ -3,22 +3,10 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import ExpenseItemCard from "../components/ExpenseItem";
 import SummaryBox from "../components/SummaryBox";
 import { addTripMember, deleteTrip, updateTrip } from "../api/trips";
+import { getCurrentUserId } from "../auth/currentUser";
 import { useExpenses } from "../hooks/useExpenses";
 import { useMembers } from "../hooks/useMembers";
 import { useTrip } from "../hooks/useTrip";
-
-function getCurrentUserId(): string {
-  const token = localStorage.getItem("id_token");
-  if (token) {
-    try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      return payload.sub ?? "";
-    } catch {
-      return "";
-    }
-  }
-  return import.meta.env.VITE_DEBUG_USER_ID ?? "";
-}
 
 export default function TripDetailPage() {
   const { tripId } = useParams();
@@ -40,14 +28,39 @@ export default function TripDetailPage() {
   const [savingMember, setSavingMember] = useState(false);
 
   const totals = useMemo(() => {
-    const totalAmount = expenseState.data.reduce((sum, item) => sum + item.amount, 0);
+    const totalAmount = expenseState.data.reduce(
+      (sum, item) => sum + item.amount,
+      0,
+    );
     const rate = tripState.data?.rate_to_jpy ?? 0;
     const totalYen = Math.round(totalAmount * rate);
     return { totalAmount, totalYen };
   }, [expenseState.data, tripState.data]);
 
+  const paidTotals = useMemo(() => {
+    const totalsByUserId = new Map<string, number>();
+
+    memberState.data.forEach((member) => {
+      totalsByUserId.set(member.user_id, 0);
+    });
+
+    expenseState.data.forEach((item) => {
+      const current = totalsByUserId.get(item.paid_by_user_id) ?? 0;
+      totalsByUserId.set(item.paid_by_user_id, current + item.amount);
+    });
+
+    return Array.from(totalsByUserId.entries())
+      .map(([userId, totalAmount]) => ({
+        userId,
+        totalAmount,
+        totalYen: Math.round(totalAmount * (tripState.data?.rate_to_jpy ?? 0)),
+      }))
+      .sort((a, b) => b.totalAmount - a.totalAmount);
+  }, [expenseState.data, memberState.data, tripState.data]);
+
   const currentUserId = getCurrentUserId();
-  const canDelete = !!tripState.data?.owner_id && tripState.data.owner_id === currentUserId;
+  const canDelete =
+    !!tripState.data?.owner_id && tripState.data.owner_id === currentUserId;
   const canEditRate = canDelete;
 
   const handleDelete = async () => {
@@ -140,14 +153,22 @@ export default function TripDetailPage() {
   };
 
   if (tripState.loading) {
-    return <div className="page"><div className="status">Loading trip...</div></div>;
+    return (
+      <div className="page">
+        <div className="status">Loading trip...</div>
+      </div>
+    );
   }
 
   if (tripState.error || !tripState.data) {
     return (
       <div className="page">
-        <div className="status status--error">{tripState.error ?? "Trip not found"}</div>
-        <Link className="back-link" to="/">Back to trips</Link>
+        <div className="status status--error">
+          {tripState.error ?? "Trip not found"}
+        </div>
+        <Link className="back-link" to="/">
+          Back to trips
+        </Link>
       </div>
     );
   }
@@ -157,11 +178,15 @@ export default function TripDetailPage() {
   return (
     <div className="page">
       <header className="detail-header">
-        <Link className="back-link" to="/">← Trips</Link>
+        <Link className="back-link" to="/">
+          Trips
+        </Link>
         <h1 className="detail-title">{trip.title}</h1>
         <div className="detail-meta">
           <span className="chip">{trip.country}</span>
-          <span className="chip">{trip.start_date} - {trip.end_date}</span>
+          <span className="chip">
+            {trip.start_date} - {trip.end_date}
+          </span>
           <span className="chip">Owner: {trip.owner_name ?? "owner"}</span>
         </div>
       </header>
@@ -172,6 +197,29 @@ export default function TripDetailPage() {
         totalYen={totals.totalYen}
         rateToJpy={trip.rate_to_jpy}
       />
+
+      <section className="paid-summary">
+        <div className="section-title">Paid totals</div>
+        {memberState.loading && (
+          <div className="status">Loading members...</div>
+        )}
+        {!memberState.loading && paidTotals.length === 0 && (
+          <div className="empty">No payment totals yet.</div>
+        )}
+        <div className="paid-summary__list">
+          {paidTotals.map((item) => (
+            <div key={item.userId} className="paid-summary__item">
+              <div className="paid-summary__user">{item.userId}</div>
+              <div className="paid-summary__values">
+                <div>
+                  {item.totalAmount} {trip.base_currency}
+                </div>
+                <div className="muted">{item.totalYen} JPY</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {canEditRate && (
         <section className="settings">
@@ -188,14 +236,20 @@ export default function TripDetailPage() {
           {!settingsOpen && (
             <div className="settings__summary">
               <div>{trip.title}</div>
-              <div>{trip.start_date} - {trip.end_date}</div>
+              <div>
+                {trip.start_date} - {trip.end_date}
+              </div>
               <div>Base: {trip.base_currency}</div>
               <div>Rate: {trip.rate_to_jpy}</div>
               <div className="settings__members">
                 <div className="settings__label">Members</div>
-                {memberState.loading && <div className="status">Loading members...</div>}
+                {memberState.loading && (
+                  <div className="status">Loading members...</div>
+                )}
                 {memberState.error && (
-                  <div className="status status--error">{memberState.error}</div>
+                  <div className="status status--error">
+                    {memberState.error}
+                  </div>
                 )}
                 {!memberState.loading && memberState.data.length === 0 && (
                   <div className="empty">No members yet.</div>
@@ -203,7 +257,9 @@ export default function TripDetailPage() {
                 <div className="members-list">
                   {memberState.data.map((member) => (
                     <div key={member.user_id} className="members-list__item">
-                      <span className="members-list__user">{member.user_id}</span>
+                      <span className="members-list__user">
+                        {member.user_id}
+                      </span>
                       <span className="members-list__role">{member.role}</span>
                       {canDelete && member.role !== "owner" && (
                         <button
@@ -247,7 +303,9 @@ export default function TripDetailPage() {
                   onChange={(event) => setEndDateInput(event.target.value)}
                 />
               </label>
-              {tripError && <div className="status status--error">{tripError}</div>}
+              {tripError && (
+                <div className="status status--error">{tripError}</div>
+              )}
               <button className="primary" type="submit" disabled={savingTrip}>
                 {savingTrip ? "Saving..." : "Update Trip"}
               </button>
@@ -272,7 +330,9 @@ export default function TripDetailPage() {
                   onChange={(event) => setRateInput(event.target.value)}
                 />
               </label>
-              {rateError && <div className="status status--error">{rateError}</div>}
+              {rateError && (
+                <div className="status status--error">{rateError}</div>
+              )}
               <button className="primary" type="submit" disabled={savingRate}>
                 {savingRate ? "Saving..." : "Update Rate"}
               </button>
@@ -292,7 +352,9 @@ export default function TripDetailPage() {
                   onChange={(event) => setMemberUserId(event.target.value)}
                 />
               </label>
-              {memberError && <div className="status status--error">{memberError}</div>}
+              {memberError && (
+                <div className="status status--error">{memberError}</div>
+              )}
               <button className="primary" type="submit" disabled={savingMember}>
                 {savingMember ? "Saving..." : "Add member"}
               </button>
@@ -302,12 +364,16 @@ export default function TripDetailPage() {
       )}
 
       {canDelete && (
-        <button className="danger" onClick={handleDelete}>Delete Trip</button>
+        <button className="danger" onClick={handleDelete}>
+          Delete Trip
+        </button>
       )}
 
       <section className="expenses-section">
         <div className="section-title">Expenses</div>
-        {expenseState.loading && <div className="status">Loading expenses...</div>}
+        {expenseState.loading && (
+          <div className="status">Loading expenses...</div>
+        )}
         {expenseState.error && (
           <div className="status status--error">{expenseState.error}</div>
         )}
@@ -319,6 +385,7 @@ export default function TripDetailPage() {
             <ExpenseItemCard
               key={item.expense_id}
               item={item}
+              members={memberState.data}
               rateToJpy={trip.rate_to_jpy}
               onDelete={expenseState.remove}
               onUpdate={expenseState.update}
@@ -327,7 +394,9 @@ export default function TripDetailPage() {
         </div>
       </section>
 
-      <Link className="fab" to={`/trips/${trip.trip_id}/add`}>+ Add Expense</Link>
+      <Link className="fab" to={`/trips/${trip.trip_id}/add`}>
+        + Add Expense
+      </Link>
     </div>
   );
 }

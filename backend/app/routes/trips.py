@@ -58,6 +58,7 @@ class ExpenseItem(BaseModel):
     expense_id: str
     trip_id: str
     user_id: str
+    paid_by_user_id: str
     amount: float
     currency: str
     category: Optional[str] = None
@@ -104,6 +105,7 @@ class TripMemberResponse(BaseModel):
 class ExpenseCreateRequest(BaseModel):
     amount: int | float | str
     currency: str
+    paid_by_user_id: Optional[str] = None
     category: Optional[str] = None
     note: Optional[str] = None
     datetime: str
@@ -112,6 +114,7 @@ class ExpenseCreateRequest(BaseModel):
 class ExpenseUpdateRequest(BaseModel):
     amount: int | float | str | None = None
     currency: str | None = None
+    paid_by_user_id: Optional[str] = None
     category: Optional[str] = None
     note: Optional[str] = None
     datetime: str | None = None
@@ -345,6 +348,18 @@ def _get_expense_by_id(dynamodb, table_name: str, expense_id: str) -> dict:
     return items[0]
 
 
+def _resolve_paid_by_user_id(
+    dynamodb,
+    trip_members_table: str,
+    trip_id: str,
+    paid_by_user_id: Optional[str],
+    default_user_id: str,
+) -> str:
+    payer_user_id = paid_by_user_id or default_user_id
+    _ensure_member_or_forbid(dynamodb, trip_members_table, payer_user_id, trip_id)
+    return payer_user_id
+
+
 # デコレーター
 @router.get("/me/trips", response_model=TripsResponse)
 def list_my_trips(x_debug_user_id: str | None = Header(default=None)):
@@ -558,6 +573,9 @@ def list_expenses(
                     expense_id=item.get("expense_id", ""),
                     trip_id=item.get("trip_id", ""),
                     user_id=item.get("user_id", ""),
+                    paid_by_user_id=item.get(
+                        "paid_by_user_id", item.get("user_id", "")
+                    ),
                     amount=_as_float(item.get("amount", 0)),
                     currency=item.get("currency", ""),
                     category=item.get("category"),
@@ -881,6 +899,13 @@ def create_expense(
 
         amount = _parse_amount_number(req.amount)
         datetime_value = _parse_datetime_utc(req.datetime)
+        paid_by_user_id = _resolve_paid_by_user_id(
+            dynamodb,
+            tables["trip_members"],
+            trip_id,
+            req.paid_by_user_id,
+            user_id,
+        )
 
         expense_id = str(uuid.uuid4())
         datetime_expense_id = f"{datetime_value}#{expense_id}"
@@ -892,6 +917,7 @@ def create_expense(
             "expense_id": expense_id,
             "datetime": datetime_value,
             "user_id": user_id,
+            "paid_by_user_id": paid_by_user_id,
             "amount": amount,
             "currency": req.currency,
             "category": req.category,
@@ -905,6 +931,7 @@ def create_expense(
             expense_id=expense_id,
             trip_id=trip_id,
             user_id=user_id,
+            paid_by_user_id=paid_by_user_id,
             amount=_as_float(amount),
             currency=req.currency,
             category=req.category,
@@ -954,6 +981,14 @@ def update_expense(
             update_values["category"] = req.category
         if req.note is not None:
             update_values["note"] = req.note
+        if req.paid_by_user_id is not None:
+            update_values["paid_by_user_id"] = _resolve_paid_by_user_id(
+                dynamodb,
+                tables["trip_members"],
+                trip_id,
+                req.paid_by_user_id,
+                user_id,
+            )
 
         new_datetime = None
         if req.datetime is not None:
@@ -972,6 +1007,10 @@ def update_expense(
                 "expense_id": expense_id,
                 "datetime": new_datetime,
                 "user_id": expense.get("user_id"),
+                "paid_by_user_id": update_values.get(
+                    "paid_by_user_id",
+                    expense.get("paid_by_user_id", expense.get("user_id")),
+                ),
                 "amount": update_values.get("amount", expense.get("amount")),
                 "currency": update_values.get("currency", expense.get("currency")),
                 "category": update_values.get("category", expense.get("category")),
@@ -1017,6 +1056,7 @@ def update_expense(
             expense_id=updated.get("expense_id", ""),
             trip_id=updated.get("trip_id", ""),
             user_id=updated.get("user_id", ""),
+            paid_by_user_id=updated.get("paid_by_user_id", updated.get("user_id", "")),
             amount=_as_float(updated.get("amount", 0)),
             currency=updated.get("currency", ""),
             category=updated.get("category"),
