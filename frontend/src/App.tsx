@@ -1,12 +1,23 @@
 ﻿import { useEffect, useState } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import {
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import HomePage from "./pages/HomePage";
 import TripDetailPage from "./pages/TripDetailPage";
 import AddExpensePage from "./pages/AddExpensePage";
 import AddTripPage from "./pages/AddTripPage";
+import ProfileSetupPage from "./pages/ProfileSetupPage";
+import { fetchMe } from "./api/me";
 import { getIdToken, handleCallbackIfNeeded, login } from "./auth/cognito";
 
 export default function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [ready, setReady] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
@@ -22,19 +33,31 @@ export default function App() {
           return;
         }
 
-        if (mounted) setReady(true);
-      } catch (err) {
-        if (mounted) {
-          setAuthError((err as Error).message ?? "Authentication failed");
-          setReady(true);
+        const me = await fetchMe();
+        const hasName = !!me.name?.trim();
+
+        if (!mounted) return;
+
+        if (!hasName && location.pathname !== "/profile/setup") {
+          navigate("/profile/setup", { replace: true });
         }
+
+        if (hasName && location.pathname === "/profile/setup") {
+          navigate("/", { replace: true });
+        }
+
+        setReady(true);
+      } catch (err) {
+        if (!mounted) return;
+        setAuthError((err as Error).message ?? "Authentication failed");
+        setReady(true);
       }
     })();
 
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [location.pathname, navigate]);
 
   if (!ready) {
     return (
@@ -55,6 +78,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
+      <Route path="/profile/setup" element={<ProfileSetupPage />} />
       <Route path="/trips/new" element={<AddTripPage />} />
       <Route path="/trips/:tripId" element={<TripDetailPage />} />
       <Route path="/trips/:tripId/add" element={<AddExpensePage />} />

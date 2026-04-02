@@ -1,6 +1,6 @@
 ﻿from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import trips
+from app.routes import me, trips
 from app import auth
 
 app = FastAPI(title="Travel Expense App API", version="0.1.0")
@@ -43,6 +43,7 @@ async def bind_user_context(request, call_next):
         auth.reset_current_user(token)
 
 
+app.include_router(me.router)
 app.include_router(trips.router)
 
 
