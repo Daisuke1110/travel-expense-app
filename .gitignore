@@ -1,4 +1,7 @@
-*.md
 .gitignore
 backend/build/
-.vscode
+backend/package/
+backend/app/__pycache__/
+*.pyc*
+*.pyc
+*.zip
