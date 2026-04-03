@@ -45,6 +45,7 @@ class TripDetail(BaseModel):
 
 class TripMemberItem(BaseModel):
     user_id: str
+    name: Optional[str] = None
     trip_id: str
     role: str
     joined_at: Optional[str] = None
@@ -58,6 +59,7 @@ class ExpenseItem(BaseModel):
     expense_id: str
     trip_id: str
     user_id: str
+    user_name: Optional[str] = None
     paid_by_user_id: str
     amount: float
     currency: str
@@ -156,6 +158,23 @@ def _batch_get_items(
             request = {"RequestItems": {table_name: {"Keys": unprocessed or []}}}
 
     return results
+
+
+def _get_user_name_map(
+    dynamodb, users_table: str, user_ids: List[str]
+) -> Dict[str, str]:
+    unique_ids = list({user_id for user_id in user_ids if user_id})
+    users = _batch_get_items(
+        dynamodb=dynamodb,
+        table_name=users_table,
+        ids=unique_ids,
+        key_name="user_id",
+    )
+    return {
+        user["user_id"]: user.get("name") or user.get("email") or user["user_id"]
+        for user in users
+        if "user_id" in user
+    }
 
 
 def _get_trip_or_404(dynamodb, table_name: str, trip_id: str) -> dict:
