@@ -5,6 +5,7 @@ export type ExpenseItem = {
   trip_id: string;
   user_id: string;
   paid_by_user_id: string;
+  paid_by_name?: string | null;
   amount: number;
   currency: string;
   category?: string | null;

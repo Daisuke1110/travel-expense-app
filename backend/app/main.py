@@ -12,6 +12,7 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "http://172.19.0.4:5173",
         "https://travel-expense-dev.daisuke-selfstudy.com",
+        "https://travel-expense.daisuke-selfstudy.com", 
     ],
     allow_methods=["*"],
     allow_headers=["*"],

@@ -12,7 +12,7 @@ cors_allowed_origins = [
   "http://localhost:5173"
 ]
 enable_pitr           = false
-lambda_package_path   = "C:/travel-expense-app/backend/lambda.zip"
+lambda_package_path   = "/Users/daisuke/旅行費用アプリ/backend/lambda.zip"
 lambda_handler        = "app.lambda.handler"
 enable_jwt_authorizer = true
 cognito_domain_prefix = "travel-expense-dev-auth"

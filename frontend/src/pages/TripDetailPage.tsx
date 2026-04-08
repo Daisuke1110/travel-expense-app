@@ -37,6 +37,15 @@ export default function TripDetailPage() {
     return { totalAmount, totalYen };
   }, [expenseState.data, tripState.data]);
 
+  const memberNameById = useMemo(() => {
+    return new Map(
+      memberState.data.map((member) => [
+        member.user_id,
+        member.name ?? member.user_id,
+      ]),
+    );
+  }, [memberState.data]);
+
   const paidTotals = useMemo(() => {
     const totalsByUserId = new Map<string, number>();
 
@@ -209,7 +218,9 @@ export default function TripDetailPage() {
         <div className="paid-summary__list">
           {paidTotals.map((item) => (
             <div key={item.userId} className="paid-summary__item">
-              <div className="paid-summary__user">{item.userId}</div>
+              <div className="paid-summary__user">
+                {memberNameById.get(item.userId) ?? item.userId}
+              </div>
               <div className="paid-summary__values">
                 <div>
                   {item.totalAmount} {trip.base_currency}
@@ -258,7 +269,7 @@ export default function TripDetailPage() {
                   {memberState.data.map((member) => (
                     <div key={member.user_id} className="members-list__item">
                       <span className="members-list__user">
-                        {member.user_id}
+                        {member.name ?? member.user_id}
                       </span>
                       <span className="members-list__role">{member.role}</span>
                       {canDelete && member.role !== "owner" && (

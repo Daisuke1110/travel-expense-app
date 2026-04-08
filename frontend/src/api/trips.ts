@@ -50,6 +50,7 @@ export type TripMemberRequest = {
 
 export type TripMemberResponse = {
   user_id: string;
+  name?: string | null;
   trip_id: string;
   role: string;
   joined_at: string;

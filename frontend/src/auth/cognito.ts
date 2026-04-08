@@ -1,7 +1,9 @@
-const COGNITO_DOMAIN = import.meta.env.VITE_COGNITO_DOMAIN ?? "";
-const CLIENT_ID = import.meta.env.VITE_COGNITO_CLIENT_ID ?? "";
-const REDIRECT_URI = import.meta.env.VITE_COGNITO_REDIRECT_URI ?? "";
-const LOGOUT_URI = import.meta.env.VITE_COGNITO_LOGOUT_URI ?? REDIRECT_URI;
+import { appConfig } from "../config";
+
+const COGNITO_DOMAIN = appConfig.cognitoDomain;
+const CLIENT_ID = appConfig.cognitoClientId;
+const REDIRECT_URI = appConfig.cognitoRedirectUri;
+const LOGOUT_URI = appConfig.cognitoLogoutUri || REDIRECT_URI;
 
 const ID_TOKEN_KEY = "id_token";
 const ACCESS_TOKEN_KEY = "access_token";

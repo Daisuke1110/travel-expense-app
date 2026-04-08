@@ -11,7 +11,7 @@ cors_allowed_origins = [
   "https://travel-expense.daisuke-selfstudy.com"
 ]
 enable_pitr           = true
-lambda_package_path   = "C:/travel-expense-app/backend/lambda.zip"
+lambda_package_path   = "/Users/daisuke/旅行費用アプリ/backend/lambda.zip"
 lambda_handler        = "app.lambda.handler"
 enable_jwt_authorizer = true
 cognito_domain_prefix = "travel-expense-prod-auth"

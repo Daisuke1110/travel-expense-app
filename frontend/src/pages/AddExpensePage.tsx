@@ -174,8 +174,8 @@ export default function AddExpensePage() {
               required
             >
               {payerOptions.map((member) => (
-                <option key={member.user_id} value={member.user_id}>
-                  {member.user_id}
+                <option key={member.name} value={member.user_id}>
+                  {member.name}
                 </option>
               ))}
             </select>

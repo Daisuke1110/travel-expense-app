@@ -1,6 +1,7 @@
 ﻿import { getIdToken } from "../auth/cognito";
+import { appConfig } from "../config";
 
-const baseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
+const baseUrl = appConfig.apiBaseUrl;
 
 export async function apiFetch<T>(
   path: string,

@@ -139,7 +139,9 @@ export default function ExpenseItemCard({
         </div>
       </div>
       <div className="expense-card__meta">
-        <span className="chip">Paid by {item.paid_by_user_id}</span>
+        <span className="chip">
+          Paid by {item.paid_by_name ?? item.paid_by_user_id}
+        </span>
         <span className="chip">{item.category ?? "other"}</span>
         <span className="muted">{formatDate(item.datetime)}</span>
       </div>
@@ -177,7 +179,7 @@ export default function ExpenseItemCard({
             >
               {members.map((member) => (
                 <option key={member.user_id} value={member.user_id}>
-                  {member.user_id}
+                  {member.name ?? member.user_id}
                 </option>
               ))}
             </select>

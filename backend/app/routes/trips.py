@@ -61,6 +61,7 @@ class ExpenseItem(BaseModel):
     user_id: str
     user_name: Optional[str] = None
     paid_by_user_id: str
+    paid_by_name: Optional[str] = None
     amount: float
     currency: str
     category: Optional[str] = None
@@ -585,24 +586,37 @@ def list_expenses(
             if not last_evaluated_key:
                 break
 
+        user_ids_for_names: List[str] = []  
+        for item in items:  
+            user_ids_for_names.append(item.get("user_id", ""))  
+            user_ids_for_names.append(item.get("paid_by_user_id", item.get("user_id", "")))
+
+        name_map = _get_user_name_map(  
+            dynamodb=dynamodb,  
+            users_table=tables["users"],  
+            user_ids=user_ids_for_names,  
+        )
+
         expenses: List[ExpenseItem] = []
         for item in items:
-            expenses.append(
-                ExpenseItem(
-                    expense_id=item.get("expense_id", ""),
-                    trip_id=item.get("trip_id", ""),
-                    user_id=item.get("user_id", ""),
-                    paid_by_user_id=item.get(
-                        "paid_by_user_id", item.get("user_id", "")
-                    ),
-                    amount=_as_float(item.get("amount", 0)),
-                    currency=item.get("currency", ""),
-                    category=item.get("category"),
-                    note=item.get("note"),
-                    datetime=item.get("datetime", ""),
-                    datetime_expense_id=item.get("datetime_expense_id", ""),
-                    created_at=item.get("created_at"),
-                )
+            expenses.append(  
+                ExpenseItem(  
+                    expense_id=item.get("expense_id", ""),  
+                    trip_id=item.get("trip_id", ""),  
+                    user_id=item.get("user_id", ""),  
+                    user_name=name_map.get(item.get("user_id", "")),  
+                    paid_by_user_id=item.get("paid_by_user_id", item.get("user_id", "")),  
+                    paid_by_name=name_map.get(  
+                        item.get("paid_by_user_id", item.get("user_id", ""))  
+                    ),  
+                    amount=_as_float(item.get("amount", 0)),  
+                    currency=item.get("currency", ""),  
+                    category=item.get("category"),  
+                    note=item.get("note"),  
+                    datetime=item.get("datetime", ""),  
+                    datetime_expense_id=item.get("datetime_expense_id", ""),  
+                    created_at=item.get("created_at"),  
+                )  
             )
 
         return ExpensesResponse(expenses=expenses)
@@ -791,10 +805,17 @@ def list_trip_members(
             trip_id=trip_id,
         )
 
+        name_map = _get_user_name_map(  
+            dynamodb=dynamodb,
+            users_table=tables["users"],  
+            user_ids=[item.get("user_id", "") for item in members],  
+        )
+
         return TripMembersResponse(
             members=[
                 TripMemberItem(
                     user_id=item.get("user_id", ""),
+                    name=name_map.get(item.get("user_id", "")),
                     trip_id=item.get("trip_id", ""),
                     role=item.get("role", ""),
                     joined_at=item.get("joined_at"),
@@ -946,18 +967,26 @@ def create_expense(
 
         dynamodb.Table(tables["expenses"]).put_item(Item=item)
 
-        return ExpenseItem(
-            expense_id=expense_id,
-            trip_id=trip_id,
-            user_id=user_id,
-            paid_by_user_id=paid_by_user_id,
+        name_map = _get_user_name_map(  
+            dynamodb=dynamodb,
+            users_table=tables["users"],  
+            user_ids=[user_id, paid_by_user_id],  
+        )
+
+        return ExpenseItem(  
+            expense_id=expense_id,  
+            trip_id=trip_id,  
+            user_id=user_id,  
+            user_name=name_map.get(user_id),  
+            paid_by_user_id=paid_by_user_id,  
+            paid_by_name=name_map.get(paid_by_user_id),  
             amount=_as_float(amount),
-            currency=req.currency,
-            category=req.category,
-            note=req.note,
-            datetime=datetime_value,
-            datetime_expense_id=datetime_expense_id,
-            created_at=created_at,
+            currency=req.currency,  
+            category=req.category,  
+            note=req.note,  
+            datetime=datetime_value,  
+            datetime_expense_id=datetime_expense_id,  
+            created_at=created_at,  
         )
     except HTTPException:
         raise
@@ -1071,18 +1100,29 @@ def update_expense(
             else:
                 updated = expense
 
-        return ExpenseItem(
-            expense_id=updated.get("expense_id", ""),
-            trip_id=updated.get("trip_id", ""),
-            user_id=updated.get("user_id", ""),
-            paid_by_user_id=updated.get("paid_by_user_id", updated.get("user_id", "")),
-            amount=_as_float(updated.get("amount", 0)),
-            currency=updated.get("currency", ""),
+        updated_user_id = updated.get("user_id", "")  
+        updated_paid_by_user_id = updated.get("paid_by_user_id", updated_user_id)
+
+        name_map = _get_user_name_map(  
+            dynamodb=dynamodb,  
+            users_table=tables["users"],  
+            user_ids=[updated_user_id, updated_paid_by_user_id],  
+        )
+
+        return ExpenseItem(  
+            expense_id=updated.get("expense_id", ""),  
+            trip_id=updated.get("trip_id", ""),  
+            user_id=updated_user_id,  
+            user_name=name_map.get(updated_user_id),  
+            paid_by_user_id=updated_paid_by_user_id,  
+            paid_by_name=name_map.get(updated_paid_by_user_id),  
+            amount=_as_float(updated.get("amount", 0)),  
+            currency=updated.get("currency", ""),  
             category=updated.get("category"),
-            note=updated.get("note"),
-            datetime=updated.get("datetime", ""),
-            datetime_expense_id=updated.get("datetime_expense_id", ""),
-            created_at=updated.get("created_at"),
+            note=updated.get("note"),  
+            datetime=updated.get("datetime", ""),  
+            datetime_expense_id=updated.get("datetime_expense_id", ""),  
+            created_at=updated.get("created_at"),  
         )
 
     except HTTPException:

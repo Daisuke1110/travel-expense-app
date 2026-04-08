@@ -17,3 +17,19 @@ output "frontend_bucket_name" {
 output "cloudfront_domain_name" {
   value = module.frontend.cloudfront_domain_name
 }
+
+output "frontend_url" {
+  value = "https://${var.frontend_subdomain}.${var.domain_name}"
+}
+
+output "api_url" {
+  value = "https://${var.api_subdomain}.${var.domain_name}"
+}
+
+output "cognito_domain" {
+  value = module.cognito.domain
+}
+
+output "cognito_client_id" {
+  value = module.cognito.user_pool_client_id
+}
