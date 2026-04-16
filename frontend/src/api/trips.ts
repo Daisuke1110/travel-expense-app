@@ -45,7 +45,8 @@ export type TripUpdateRequest = {
 };
 
 export type TripMemberRequest = {
-  user_id: string;
+  user_id?: string;
+  email?: string;
 };
 
 export type TripMemberResponse = {

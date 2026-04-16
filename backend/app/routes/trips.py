@@ -94,7 +94,8 @@ class TripUpdateRequest(BaseModel):
 
 
 class TripMemberCreateRequest(BaseModel):
-    user_id: str
+    user_id: str | None = None
+    email: str | None = None
     role: str | None = None
 
 
@@ -379,6 +380,15 @@ def _resolve_paid_by_user_id(
     _ensure_member_or_forbid(dynamodb, trip_members_table, payer_user_id, trip_id)
     return payer_user_id
 
+def _get_user_by_email(dynamodb, table_name: str, email: str) -> dict | None:
+    normalized = email.strip().lower()
+    response = dynamodb.Table(table_name).query(
+        IndexName="email-index",
+        KeyConditionExpression=Key("email").eq(normalized),
+        Limit=1,
+    )
+    items = response.get("Items", [])
+    return items[0] if items else None
 
 # デコレーター
 @router.get("/me/trips", response_model=TripsResponse)
@@ -838,7 +848,7 @@ def add_member(
     trip_id: str = Path(..., description="Trip_ID"),
     req: TripMemberCreateRequest = ...,
     x_debug_user_id: str | None = Header(default=None),
-):
+):  
     user_id = _get_user_id(x_debug_user_id)
     tables = get_table_names()
     dynamodb = get_dynamodb_resource()
@@ -847,9 +857,23 @@ def add_member(
         _get_trip_or_404(dynamodb, tables["trips"], trip_id)
         _ensure_owner(dynamodb, tables["trip_members"], user_id, trip_id)
 
+        if req.user_id and req.email:
+            raise HTTPException(status_code=400, detail="Specify either user_id or email")
+
+        target_user_id = req.user_id
+
+        if not target_user_id and req.email:
+            user = _get_user_by_email(dynamodb, tables["users"], req.email)
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+            target_user_id = user["user_id"]
+
+        if not target_user_id:
+            raise HTTPException(status_code=400, detail="user_id or email is required")
+
         joined_at = _utc_now_iso()
         member_item = {
-            "user_id": req.user_id,
+            "user_id": target_user_id,
             "trip_id": trip_id,
             "role": "member",
             "joined_at": joined_at,
@@ -861,7 +885,7 @@ def add_member(
         )
 
         return TripMemberResponse(
-            user_id=req.user_id, trip_id=trip_id, role="member", joined_at=joined_at
+            user_id=target_user_id, trip_id=trip_id, role="member", joined_at=joined_at
         )
 
     except HTTPException:

@@ -48,7 +48,8 @@ data "aws_iam_policy_document" "lambda_policy" {
       "arn:aws:dynamodb:${var.aws_region}:*:table/${var.trip_members_table}",
       "arn:aws:dynamodb:${var.aws_region}:*:table/${var.expenses_table}",
       "arn:aws:dynamodb:${var.aws_region}:*:table/${var.trip_members_table}/index/*",
-      "arn:aws:dynamodb:${var.aws_region}:*:table/${var.expenses_table}/index/*"
+      "arn:aws:dynamodb:${var.aws_region}:*:table/${var.expenses_table}/index/*",
+      "arn:aws:dynamodb:${var.aws_region}:*:table/${var.users_table}/index/*"
     ]
   }
 

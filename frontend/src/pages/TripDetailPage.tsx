@@ -23,7 +23,7 @@ export default function TripDetailPage() {
   const [tripError, setTripError] = useState<string | null>(null);
   const [savingTrip, setSavingTrip] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [memberUserId, setMemberUserId] = useState("");
+  const [memberEmail, setMemberEmail] = useState("");
   const [memberError, setMemberError] = useState<string | null>(null);
   const [savingMember, setSavingMember] = useState(false);
 
@@ -142,17 +142,17 @@ export default function TripDetailPage() {
     event.preventDefault();
     if (!tripState.data) return;
 
-    const userId = memberUserId.trim();
-    if (!userId) {
-      setMemberError("User ID is required.");
+    const email = memberEmail.trim();
+    if (!email) {
+      setMemberError("Email is required.");
       return;
     }
 
     setMemberError(null);
     setSavingMember(true);
     try {
-      await addTripMember(tripState.data.trip_id, { user_id: userId });
-      setMemberUserId("");
+      await addTripMember(tripState.data.trip_id, { email });
+      setMemberEmail("");
       await memberState.refresh();
     } catch (err) {
       setMemberError((err as Error).message ?? "Failed to add member");
@@ -358,9 +358,9 @@ export default function TripDetailPage() {
                 <span>Add member</span>
                 <input
                   type="text"
-                  placeholder="user-abc"
-                  value={memberUserId}
-                  onChange={(event) => setMemberUserId(event.target.value)}
+                  placeholder="foo@example.com"
+                  value={memberEmail}
+                  onChange={(event) => setMemberEmail(event.target.value)}
                 />
               </label>
               {memberError && (

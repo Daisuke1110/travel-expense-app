@@ -26,6 +26,17 @@ resource "aws_dynamodb_table" "users" {
     type = "S"
   }
 
+   attribute {
+    name = "email"
+    type = "S"
+  }
+
+    global_secondary_index {
+    name            = "email-index"
+    hash_key        = "email"
+    projection_type = "ALL"
+  }
+
   point_in_time_recovery {
     enabled = var.enable_pitr
   }
