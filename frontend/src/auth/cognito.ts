@@ -50,6 +50,33 @@ export function getIdToken(): string {
   return localStorage.getItem(ID_TOKEN_KEY) ?? "";
 }
 
+export function getRefreshToken(): string {
+  return localStorage.getItem(REFRESH_TOKEN_KEY) ?? "";
+}
+
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(
+      normalized.length + ((4 - (normalized.length % 4)) % 4),
+      "=",
+    );
+    return JSON.parse(atob(padded)) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+export function isTokenExpired(token: string, skewSeconds = 30): boolean {
+  if (!token) return true;
+  const payload = decodeJwtPayload(token);
+  const exp = payload?.exp;
+  if (typeof exp !== "number") return true;
+  return Date.now() >= (exp - skewSeconds) * 1000;
+}
+
 function loadPkceStateMap(): Record<string, string> {
   const raw = sessionStorage.getItem(PKCE_STATE_MAP_KEY);
   if (!raw) return {};
@@ -94,6 +121,57 @@ export function clearTokens(): void {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
   clearAuthFlowState();
+}
+
+export async function refreshTokens(): Promise<boolean> {
+  assertConfig();
+
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return false;
+
+  const body = new URLSearchParams();
+  body.set("grant_type", "refresh_token");
+  body.set("client_id", CLIENT_ID);
+  body.set("refresh_token", refreshToken);
+
+  const res = await fetch(`https://${COGNITO_DOMAIN}/oauth2/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: body.toString(),
+  });
+
+  if (!res.ok) {
+    clearTokens();
+    return false;
+  }
+
+  const data = (await res.json()) as {
+    id_token?: string;
+    access_token?: string;
+    refresh_token?: string;
+  };
+
+  if (!data.id_token) {
+    clearTokens();
+    return false;
+  }
+
+  localStorage.setItem(ID_TOKEN_KEY, data.id_token);
+  if (data.access_token) {
+    localStorage.setItem(ACCESS_TOKEN_KEY, data.access_token);
+  }
+  if (data.refresh_token) {
+    localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh_token);
+  }
+
+  return true;
+}
+
+export async function ensureValidSession(): Promise<boolean> {
+  const idToken = getIdToken();
+  if (!idToken) return false;
+  if (!isTokenExpired(idToken)) return true;
+  return refreshTokens();
 }
 
 export async function login(): Promise<void> {

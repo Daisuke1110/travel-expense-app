@@ -12,7 +12,13 @@ import AddExpensePage from "./pages/AddExpensePage";
 import AddTripPage from "./pages/AddTripPage";
 import ProfileSetupPage from "./pages/ProfileSetupPage";
 import { fetchMe } from "./api/me";
-import { getIdToken, handleCallbackIfNeeded, login } from "./auth/cognito";
+import {
+  clearTokens,
+  ensureValidSession,
+  getIdToken,
+  handleCallbackIfNeeded,
+  login,
+} from "./auth/cognito";
 
 export default function App() {
   const navigate = useNavigate();
@@ -33,6 +39,13 @@ export default function App() {
           return;
         }
 
+        const valid = await ensureValidSession();
+        if (!valid) {
+          clearTokens();
+          await login();
+          return;
+        }
+
         const me = await fetchMe();
         const hasName = !!me.name?.trim();
 
@@ -49,7 +62,13 @@ export default function App() {
         setReady(true);
       } catch (err) {
         if (!mounted) return;
-        setAuthError((err as Error).message ?? "Authentication failed");
+        const message = (err as Error).message ?? "Authentication failed";
+        if (message.includes("Unauthorized")) {
+          clearTokens();
+          await login();
+          return;
+        }
+        setAuthError(message);
         setReady(true);
       }
     })();

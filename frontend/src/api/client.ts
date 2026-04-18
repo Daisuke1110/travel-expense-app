@@ -1,4 +1,4 @@
-﻿import { getIdToken } from "../auth/cognito";
+﻿import { clearTokens, ensureValidSession, getIdToken, login } from "../auth/cognito";
 import { appConfig } from "../config";
 
 const baseUrl = appConfig.apiBaseUrl;
@@ -7,6 +7,8 @@ export async function apiFetch<T>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
+  await ensureValidSession();
+
   const headers = new Headers(init.headers);
 
   if (init.body && !headers.has("Content-Type")) {
@@ -19,6 +21,12 @@ export async function apiFetch<T>(
   }
 
   const res = await fetch(`${baseUrl}${path}`, { ...init, headers });
+
+  if (res.status === 401) {
+    clearTokens();
+    await login();
+    throw new Error("Unauthorized");
+  }
 
   if (!res.ok) {
     const text = await res.text();
