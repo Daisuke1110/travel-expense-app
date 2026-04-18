@@ -10,12 +10,12 @@ export function useMembers(tripId: string | undefined) {
     if (!tripId) return Promise.resolve();
     return fetchTripMembers(tripId)
       .then((res) => setData(res.members))
-      .catch((err) => setError(err.message ?? "Failed to load members"));
+      .catch((err) => setError(err.message ?? "メンバーの読み込みに失敗しました。"));
   }, [tripId]);
 
   useEffect(() => {
     if (!tripId) {
-      setError("Missing trip id");
+      setError("旅行 ID がありません。");
       setLoading(false);
       return;
     }
@@ -26,7 +26,7 @@ export function useMembers(tripId: string | undefined) {
         if (mounted) setData(res.members);
       })
       .catch((err) => {
-        if (mounted) setError(err.message ?? "Failed to load members");
+        if (mounted) setError(err.message ?? "メンバーの読み込みに失敗しました。");
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -44,7 +44,7 @@ export function useMembers(tripId: string | undefined) {
       try {
         await deleteTripMember(tripId, memberUserId);
       } catch (err) {
-        setError((err as Error).message ?? "Failed to delete member");
+        setError((err as Error).message ?? "メンバーの削除に失敗しました。");
         await refresh();
       }
     },

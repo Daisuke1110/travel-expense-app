@@ -10,31 +10,31 @@ export default function HomePage() {
     <div className="page">
       <header className="hero">
         <div className="hero__top">
-          <div className="hero__pill">Travel Expense</div>
+          <div className="hero__pill">旅行費用アプリ</div>
           <button
             className="hero__logout"
             type="button"
             onClick={() => logout()}
           >
-            Logout
+            ログアウト
           </button>
         </div>
-        <h1 className="hero__title">Your Trips</h1>
+        <h1 className="hero__title">旅行一覧</h1>
         <p className="hero__sub">
-          Track spending, split costs, and keep receipts tidy.
+          支出を記録して、旅の費用を見やすく管理します。
         </p>
       </header>
 
-      {loading && <div className="status">Loading trips...</div>}
+      {loading && <div className="status">旅行を読み込み中...</div>}
       {error && <div className="status status--error">{error}</div>}
 
       {data && (
         <div className="trip-sections">
           <section>
-            <h2 className="section-title">Owned Trips</h2>
+            <h2 className="section-title">自分の旅行</h2>
             <div className="card-grid">
               {data.own_trips.length === 0 && (
-                <div className="empty">No owned trips yet.</div>
+                <div className="empty">まだ旅行がありません。</div>
               )}
               {data.own_trips.map((trip) => (
                 <TripCard key={trip.trip_id} trip={trip} />
@@ -43,10 +43,10 @@ export default function HomePage() {
           </section>
 
           <section>
-            <h2 className="section-title">Shared Trips</h2>
+            <h2 className="section-title">共有された旅行</h2>
             <div className="card-grid">
               {data.shared_trips.length === 0 && (
-                <div className="empty">No shared trips yet.</div>
+                <div className="empty">共有された旅行はまだありません。</div>
               )}
               {data.shared_trips.map((trip) => (
                 <TripCard key={trip.trip_id} trip={trip} showOwner />
@@ -57,7 +57,7 @@ export default function HomePage() {
       )}
 
       <Link className="fab" to="/trips/new">
-        + New Trip
+        + 旅行を追加
       </Link>
     </div>
   );

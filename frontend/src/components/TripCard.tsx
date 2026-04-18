@@ -1,5 +1,6 @@
 ﻿import { Link } from "react-router-dom";
 import type { TripSummary } from "../api/trips";
+import { formatJapaneseDate } from "../utils/date";
 
 type Props = {
   trip: TripSummary;
@@ -14,13 +15,11 @@ export default function TripCard({ trip, showOwner = false }: Props) {
         <div className="trip-card__country">{trip.country}</div>
       </div>
       <div className="trip-card__dates">
-        {trip.start_date} – {trip.end_date}
+        {formatJapaneseDate(trip.start_date)} - {formatJapaneseDate(trip.end_date)}
       </div>
       {showOwner && (
-        <div className="trip-card__owner">owner: {trip.owner_name ?? "owner"}</div>
+        <div className="trip-card__owner">作成者: {trip.owner_name ?? "owner"}</div>
       )}
     </Link>
   );
 }
-
-

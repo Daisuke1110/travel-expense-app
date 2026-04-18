@@ -45,6 +45,15 @@ const CATEGORIES = [
   "amusement",
 ];
 
+const CATEGORY_LABELS: Record<string, string> = {
+  food: "食費",
+  transport: "交通費",
+  hotel: "宿泊費",
+  other: "その他",
+  shopping: "買い物",
+  amusement: "娯楽",
+};
+
 export default function ExpenseItemCard({
   item,
   members,
@@ -76,18 +85,18 @@ export default function ExpenseItemCard({
     event.preventDefault();
     const parsed = Number(amount);
     if (!Number.isFinite(parsed) || parsed <= 0) {
-      setError("Amount must be a positive number.");
+      setError("金額は正の数で入力してください。");
       return;
     }
 
     const datetime = toUtcIso(datetimeLocal);
     if (!datetime) {
-      setError("Datetime is required.");
+      setError("日時を入力してください。");
       return;
     }
 
     if (!paidByUserId) {
-      setError("Paid by is required.");
+      setError("支払者を選択してください。");
       return;
     }
 
@@ -103,7 +112,7 @@ export default function ExpenseItemCard({
       });
       setEditing(false);
     } catch (err) {
-      setError((err as Error).message ?? "Failed to update expense");
+      setError((err as Error).message ?? "支出の更新に失敗しました。");
     } finally {
       setSaving(false);
     }
@@ -116,7 +125,7 @@ export default function ExpenseItemCard({
           <div className="expense-card__amount">
             {item.amount} {item.currency}
           </div>
-          <div className="expense-card__yen">{yen}</div>
+          <div className="expense-card__yen">{yen} 円</div>
         </div>
         <div className="expense-card__actions">
           <button
@@ -127,22 +136,24 @@ export default function ExpenseItemCard({
             }}
             type="button"
           >
-            {editing ? "Cancel" : "Edit"}
+            {editing ? "キャンセル" : "編集"}
           </button>
           <button
             className="expense-card__delete"
             onClick={() => onDelete(item.expense_id)}
             type="button"
           >
-            Delete
+            削除
           </button>
         </div>
       </div>
       <div className="expense-card__meta">
         <span className="chip">
-          Paid by {item.paid_by_name ?? item.paid_by_user_id}
+          支払者: {item.paid_by_name ?? item.paid_by_user_id}
         </span>
-        <span className="chip">{item.category ?? "other"}</span>
+        <span className="chip">
+          {CATEGORY_LABELS[item.category ?? "other"] ?? (item.category ?? "other")}
+        </span>
         <span className="muted">{formatDate(item.datetime)}</span>
       </div>
       {item.note && <div className="expense-card__note">{item.note}</div>}
@@ -150,7 +161,7 @@ export default function ExpenseItemCard({
       {editing && (
         <form className="expense-card__form" onSubmit={onSubmit}>
           <label className="field">
-            <span>Datetime (local)</span>
+            <span>日時</span>
             <input
               type="datetime-local"
               value={datetimeLocal}
@@ -159,7 +170,7 @@ export default function ExpenseItemCard({
             />
           </label>
           <label className="field">
-            <span>Amount</span>
+            <span>金額</span>
             <input
               type="number"
               inputMode="numeric"
@@ -171,7 +182,7 @@ export default function ExpenseItemCard({
             />
           </label>
           <label className="field">
-            <span>Paid by</span>
+            <span>支払者</span>
             <select
               value={paidByUserId}
               onChange={(event) => setPaidByUserId(event.target.value)}
@@ -185,31 +196,31 @@ export default function ExpenseItemCard({
             </select>
           </label>
           <label className="field">
-            <span>Category</span>
+            <span>カテゴリ</span>
             <select
               value={category}
               onChange={(event) => setCategory(event.target.value)}
             >
               {CATEGORIES.map((value) => (
                 <option key={value} value={value}>
-                  {value}
+                  {CATEGORY_LABELS[value]}
                 </option>
               ))}
             </select>
           </label>
           <label className="field">
-            <span>Note</span>
+            <span>メモ</span>
             <textarea
               rows={3}
               value={note}
               onChange={(event) => setNote(event.target.value)}
-              placeholder="Optional note"
+              placeholder="任意のメモ"
             />
           </label>
           {error && <div className="status status--error">{error}</div>}
           <div className="expense-card__buttons">
             <button className="primary" type="submit" disabled={saving}>
-              {saving ? "Saving..." : "Save changes"}
+              {saving ? "保存中..." : "変更を保存"}
             </button>
           </div>
         </form>

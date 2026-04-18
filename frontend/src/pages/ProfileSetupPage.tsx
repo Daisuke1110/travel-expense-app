@@ -21,7 +21,7 @@ export default function ProfileSetupPage() {
       })
       .catch((err) => {
         if (!mounted) return;
-        setError((err as Error).message ?? "Failed to load profile");
+        setError((err as Error).message ?? "プロフィールの読み込みに失敗しました。");
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -37,7 +37,7 @@ export default function ProfileSetupPage() {
 
     const trimmed = name.trim();
     if (!trimmed) {
-      setError("Name is required.");
+      setError("表示名を入力してください。");
       return;
     }
 
@@ -48,7 +48,7 @@ export default function ProfileSetupPage() {
       await updateMe({ name: trimmed });
       navigate("/");
     } catch (err) {
-      setError((err as Error).message ?? "Failed to save profile");
+      setError((err as Error).message ?? "プロフィールの保存に失敗しました。");
     } finally {
       setSaving(false);
     }
@@ -57,7 +57,7 @@ export default function ProfileSetupPage() {
   if (loading) {
     return (
       <div className="page">
-        <div className="status">Loading profile...</div>
+        <div className="status">プロフィールを読み込み中...</div>
       </div>
     );
   }
@@ -67,26 +67,26 @@ export default function ProfileSetupPage() {
       <div className="modal">
         <header className="modal__header">
           <div>
-            <div className="modal__title">Set up your profile</div>
+            <div className="modal__title">プロフィール設定</div>
             <div className="modal__subtitle">
-              Add a display name for trip members and payments.
+              旅行メンバーや支払者として表示する名前を設定します。
             </div>
           </div>
         </header>
 
         <form className="modal__form" onSubmit={onSubmit}>
           <label className="field">
-            <span>Email</span>
+            <span>メールアドレス</span>
             <input type="text" value={email} disabled />
           </label>
 
           <label className="field">
-            <span>Display name</span>
+            <span>表示名</span>
             <input
               type="text"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="e.g. Daisuke"
+              placeholder="例: ダイスケ"
               maxLength={50}
               required
             />
@@ -95,7 +95,7 @@ export default function ProfileSetupPage() {
           {error && <div className="status status--error">{error}</div>}
 
           <button className="primary" type="submit" disabled={saving}>
-            {saving ? "Saving..." : "Save profile"}
+            {saving ? "保存中..." : "保存"}
           </button>
         </form>
       </div>

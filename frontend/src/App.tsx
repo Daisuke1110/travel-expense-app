@@ -62,7 +62,7 @@ export default function App() {
         setReady(true);
       } catch (err) {
         if (!mounted) return;
-        const message = (err as Error).message ?? "Authentication failed";
+        const message = (err as Error).message ?? "認証に失敗しました。";
         if (message.includes("Unauthorized")) {
           clearTokens();
           await login();
@@ -81,7 +81,7 @@ export default function App() {
   if (!ready) {
     return (
       <div className="page">
-        <div className="status">Signing in...</div>
+        <div className="status">サインイン中...</div>
       </div>
     );
   }

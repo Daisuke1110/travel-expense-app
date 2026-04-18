@@ -9,7 +9,7 @@ export function useTrip(tripId: string | undefined) {
 
   useEffect(() => {
     if (!tripId) {
-      setError("Missing trip id");
+      setError("旅行 ID がありません。");
       setLoading(false);
       return;
     }
@@ -20,7 +20,7 @@ export function useTrip(tripId: string | undefined) {
         if (mounted) setData(res);
       })
       .catch((err) => {
-        if (mounted) setError(err.message ?? "Failed to load trip");
+        if (mounted) setError(err.message ?? "旅行情報の読み込みに失敗しました。");
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -33,5 +33,4 @@ export function useTrip(tripId: string | undefined) {
 
   return { data, error, loading };
 }
-
 

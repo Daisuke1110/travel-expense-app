@@ -7,6 +7,7 @@ import { getCurrentUserId } from "../auth/currentUser";
 import { useExpenses } from "../hooks/useExpenses";
 import { useMembers } from "../hooks/useMembers";
 import { useTrip } from "../hooks/useTrip";
+import { formatJapaneseDate } from "../utils/date";
 
 export default function TripDetailPage() {
   const { tripId } = useParams();
@@ -74,7 +75,9 @@ export default function TripDetailPage() {
 
   const handleDelete = async () => {
     if (!tripState.data) return;
-    const ok = window.confirm("Delete this trip? This cannot be undone.");
+    const ok = window.confirm(
+      "この旅行を削除しますか？ この操作は元に戻せません。",
+    );
     if (!ok) return;
     await deleteTrip(tripState.data.trip_id);
     navigate("/");
@@ -86,7 +89,7 @@ export default function TripDetailPage() {
 
     const parsed = Number(rateInput);
     if (!Number.isFinite(parsed) || parsed <= 0) {
-      setRateError("Rate must be a positive number.");
+      setRateError("レートは正の数で入力してください。");
       return;
     }
 
@@ -99,7 +102,7 @@ export default function TripDetailPage() {
       tripState.data.rate_to_jpy = updated.rate_to_jpy;
       setRateInput("");
     } catch (err) {
-      setRateError((err as Error).message ?? "Failed to update rate");
+      setRateError((err as Error).message ?? "レートの更新に失敗しました。");
     } finally {
       setSavingRate(false);
     }
@@ -113,7 +116,7 @@ export default function TripDetailPage() {
     const startDate = startDateInput.trim();
     const endDate = endDateInput.trim();
     if (!title || !startDate || !endDate) {
-      setTripError("Title and dates are required.");
+      setTripError("タイトルと日付を入力してください。");
       return;
     }
 
@@ -132,7 +135,7 @@ export default function TripDetailPage() {
       setStartDateInput("");
       setEndDateInput("");
     } catch (err) {
-      setTripError((err as Error).message ?? "Failed to update trip");
+      setTripError((err as Error).message ?? "旅行情報の更新に失敗しました。");
     } finally {
       setSavingTrip(false);
     }
@@ -144,7 +147,7 @@ export default function TripDetailPage() {
 
     const email = memberEmail.trim();
     if (!email) {
-      setMemberError("Email is required.");
+      setMemberError("メールアドレスを入力してください。");
       return;
     }
 
@@ -155,7 +158,9 @@ export default function TripDetailPage() {
       setMemberEmail("");
       await memberState.refresh();
     } catch (err) {
-      setMemberError((err as Error).message ?? "Failed to add member");
+      setMemberError(
+        (err as Error).message ?? "メンバーの追加に失敗しました。",
+      );
     } finally {
       setSavingMember(false);
     }
@@ -164,7 +169,7 @@ export default function TripDetailPage() {
   if (tripState.loading) {
     return (
       <div className="page">
-        <div className="status">Loading trip...</div>
+        <div className="status">旅行情報を読み込み中...</div>
       </div>
     );
   }
@@ -173,10 +178,10 @@ export default function TripDetailPage() {
     return (
       <div className="page">
         <div className="status status--error">
-          {tripState.error ?? "Trip not found"}
+          {tripState.error ?? "旅行が見つかりません。"}
         </div>
         <Link className="back-link" to="/">
-          Back to trips
+          旅行一覧へ戻る
         </Link>
       </div>
     );
@@ -188,16 +193,9 @@ export default function TripDetailPage() {
     <div className="page">
       <header className="detail-header">
         <Link className="back-link" to="/">
-          Trips
+          ＜ 旅行一覧
         </Link>
         <h1 className="detail-title">{trip.title}</h1>
-        <div className="detail-meta">
-          <span className="chip">{trip.country}</span>
-          <span className="chip">
-            {trip.start_date} - {trip.end_date}
-          </span>
-          <span className="chip">Owner: {trip.owner_name ?? "owner"}</span>
-        </div>
       </header>
 
       <SummaryBox
@@ -208,12 +206,12 @@ export default function TripDetailPage() {
       />
 
       <section className="paid-summary">
-        <div className="section-title">Paid totals</div>
+        <div className="section-title">支払合計</div>
         {memberState.loading && (
-          <div className="status">Loading members...</div>
+          <div className="status">メンバーを読み込み中...</div>
         )}
         {!memberState.loading && paidTotals.length === 0 && (
-          <div className="empty">No payment totals yet.</div>
+          <div className="empty">まだ支払データがありません。</div>
         )}
         <div className="paid-summary__list">
           {paidTotals.map((item) => (
@@ -225,7 +223,7 @@ export default function TripDetailPage() {
                 <div>
                   {item.totalAmount} {trip.base_currency}
                 </div>
-                <div className="muted">{item.totalYen} JPY</div>
+                <div className="muted">{item.totalYen} 円</div>
               </div>
             </div>
           ))}
@@ -235,27 +233,27 @@ export default function TripDetailPage() {
       {canEditRate && (
         <section className="settings">
           <div className="settings__header">
-            <div className="section-title">Trip settings</div>
+            <div className="section-title">旅行設定</div>
             <button
               className="settings__toggle"
               type="button"
               onClick={() => setSettingsOpen((prev) => !prev)}
             >
-              {settingsOpen ? "Hide" : "Edit"}
+              {settingsOpen ? "閉じる" : "編集"}
             </button>
           </div>
           {!settingsOpen && (
             <div className="settings__summary">
               <div>{trip.title}</div>
               <div>
-                {trip.start_date} - {trip.end_date}
+                {formatJapaneseDate(trip.start_date)} - {formatJapaneseDate(trip.end_date)}
               </div>
-              <div>Base: {trip.base_currency}</div>
-              <div>Rate: {trip.rate_to_jpy}</div>
+              <div>基準通貨: {trip.base_currency}</div>
+              <div>レート: {trip.rate_to_jpy}</div>
               <div className="settings__members">
-                <div className="settings__label">Members</div>
+                <div className="settings__label">メンバー</div>
                 {memberState.loading && (
-                  <div className="status">Loading members...</div>
+                  <div className="status">メンバーを読み込み中...</div>
                 )}
                 {memberState.error && (
                   <div className="status status--error">
@@ -263,7 +261,7 @@ export default function TripDetailPage() {
                   </div>
                 )}
                 {!memberState.loading && memberState.data.length === 0 && (
-                  <div className="empty">No members yet.</div>
+                  <div className="empty">メンバーはまだいません。</div>
                 )}
                 <div className="members-list">
                   {memberState.data.map((member) => (
@@ -278,7 +276,7 @@ export default function TripDetailPage() {
                           type="button"
                           onClick={() => memberState.remove(member.user_id)}
                         >
-                          Remove
+                          削除
                         </button>
                       )}
                     </div>
@@ -290,7 +288,7 @@ export default function TripDetailPage() {
           {settingsOpen && (
             <form className="settings__form" onSubmit={handleTripSave}>
               <label className="field">
-                <span>Title</span>
+                <span>タイトル</span>
                 <input
                   type="text"
                   placeholder={trip.title}
@@ -299,7 +297,7 @@ export default function TripDetailPage() {
                 />
               </label>
               <label className="field">
-                <span>Start date</span>
+                <span>開始日</span>
                 <input
                   type="date"
                   value={startDateInput}
@@ -307,7 +305,7 @@ export default function TripDetailPage() {
                 />
               </label>
               <label className="field">
-                <span>End date</span>
+                <span>終了日</span>
                 <input
                   type="date"
                   value={endDateInput}
@@ -318,7 +316,7 @@ export default function TripDetailPage() {
                 <div className="status status--error">{tripError}</div>
               )}
               <button className="primary" type="submit" disabled={savingTrip}>
-                {savingTrip ? "Saving..." : "Update Trip"}
+                {savingTrip ? "保存中..." : "旅行情報を更新"}
               </button>
             </form>
           )}
@@ -328,11 +326,11 @@ export default function TripDetailPage() {
           {settingsOpen && (
             <form className="settings__form" onSubmit={handleRateSave}>
               <label className="field">
-                <span>Base currency</span>
+                <span>基準通貨</span>
                 <input type="text" value={trip.base_currency} disabled />
               </label>
               <label className="field">
-                <span>Rate to JPY</span>
+                <span>JPY レート</span>
                 <input
                   type="number"
                   step="0.01"
@@ -345,7 +343,7 @@ export default function TripDetailPage() {
                 <div className="status status--error">{rateError}</div>
               )}
               <button className="primary" type="submit" disabled={savingRate}>
-                {savingRate ? "Saving..." : "Update Rate"}
+                {savingRate ? "保存中..." : "レートを更新"}
               </button>
             </form>
           )}
@@ -355,7 +353,7 @@ export default function TripDetailPage() {
           {settingsOpen && (
             <form className="settings__form" onSubmit={handleMemberSave}>
               <label className="field">
-                <span>Add member</span>
+                <span>メンバー追加</span>
                 <input
                   type="text"
                   placeholder="foo@example.com"
@@ -367,7 +365,7 @@ export default function TripDetailPage() {
                 <div className="status status--error">{memberError}</div>
               )}
               <button className="primary" type="submit" disabled={savingMember}>
-                {savingMember ? "Saving..." : "Add member"}
+                {savingMember ? "追加中..." : "メンバーを追加"}
               </button>
             </form>
           )}
@@ -376,20 +374,20 @@ export default function TripDetailPage() {
 
       {canDelete && (
         <button className="danger" onClick={handleDelete}>
-          Delete Trip
+          旅行を削除
         </button>
       )}
 
       <section className="expenses-section">
-        <div className="section-title">Expenses</div>
+        <div className="section-title">支出一覧</div>
         {expenseState.loading && (
-          <div className="status">Loading expenses...</div>
+          <div className="status">支出を読み込み中...</div>
         )}
         {expenseState.error && (
           <div className="status status--error">{expenseState.error}</div>
         )}
         {!expenseState.loading && expenseState.data.length === 0 && (
-          <div className="empty">No expenses yet.</div>
+          <div className="empty">まだ支出がありません。</div>
         )}
         <div className="expense-list">
           {expenseState.data.map((item) => (
@@ -406,7 +404,7 @@ export default function TripDetailPage() {
       </section>
 
       <Link className="fab" to={`/trips/${trip.trip_id}/add`}>
-        + Add Expense
+        + 支出を追加
       </Link>
     </div>
   );

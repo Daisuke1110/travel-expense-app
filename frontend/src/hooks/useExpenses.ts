@@ -11,12 +11,12 @@ export function useExpenses(tripId: string | undefined) {
     if (!tripId) return Promise.resolve();
     return fetchTripExpenses(tripId)
       .then((res) => setData(res.expenses))
-      .catch((err) => setError(err.message ?? "Failed to load expenses"));
+      .catch((err) => setError(err.message ?? "支出の読み込みに失敗しました。"));
   }, [tripId]);
 
   useEffect(() => {
     if (!tripId) {
-      setError("Missing trip id");
+      setError("旅行 ID がありません。");
       setLoading(false);
       return;
     }
@@ -27,7 +27,7 @@ export function useExpenses(tripId: string | undefined) {
         if (mounted) setData(res.expenses);
       })
       .catch((err) => {
-        if (mounted) setError(err.message ?? "Failed to load expenses");
+        if (mounted) setError(err.message ?? "支出の読み込みに失敗しました。");
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -45,7 +45,7 @@ export function useExpenses(tripId: string | undefined) {
       try {
         await deleteExpense(tripId, expenseId);
       } catch (err) {
-        setError((err as Error).message ?? "Failed to delete expense");
+        setError((err as Error).message ?? "支出の削除に失敗しました。");
         await refresh();
       }
     },

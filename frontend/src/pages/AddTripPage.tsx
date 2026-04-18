@@ -3,15 +3,15 @@ import { Link, useNavigate } from "react-router-dom";
 import { createTrip } from "../api/trips";
 
 const COUNTRIES = [
-  { code: "JP", label: "Japan", currency: "JPY" },
-  { code: "US", label: "United States", currency: "USD" },
-  { code: "GB", label: "United Kingdom", currency: "GBP" },
-  { code: "EU", label: "Eurozone", currency: "EUR" },
-  { code: "KR", label: "Korea", currency: "KRW" },
-  { code: "TH", label: "Thailand", currency: "THB" },
-  { code: "SG", label: "Singapore", currency: "SGD" },
-  { code: "AU", label: "Australia", currency: "AUD" },
-  { code: "CA", label: "Canada", currency: "CAD" },
+  { code: "JP", label: "日本", currency: "JPY" },
+  { code: "US", label: "アメリカ", currency: "USD" },
+  { code: "GB", label: "イギリス", currency: "GBP" },
+  { code: "EU", label: "ユーロ圏", currency: "EUR" },
+  { code: "KR", label: "韓国", currency: "KRW" },
+  { code: "TH", label: "タイ", currency: "THB" },
+  { code: "SG", label: "シンガポール", currency: "SGD" },
+  { code: "AU", label: "オーストラリア", currency: "AUD" },
+  { code: "CA", label: "カナダ", currency: "CAD" },
 ];
 
 function isUpper3(value: string) {
@@ -39,7 +39,7 @@ export default function AddTripPage() {
 
   const fetchRate = async (currency: string) => {
     if (!apiKey) {
-      setRateError("Missing exchange rate API key.");
+      setRateError("為替レート取得用の API キーが設定されていません。");
       return;
     }
     setRateLoading(true);
@@ -53,11 +53,11 @@ export default function AddTripPage() {
       }
       const data = await res.json();
       if (data.result !== "success" || typeof data.conversion_rate !== "number") {
-        throw new Error("Failed to fetch rate.");
+        throw new Error("為替レートの取得に失敗しました。");
       }
       setRateToJpy(String(data.conversion_rate));
     } catch (err) {
-      setRateError((err as Error).message ?? "Failed to fetch rate.");
+      setRateError((err as Error).message ?? "為替レートの取得に失敗しました。");
     } finally {
       setRateLoading(false);
     }
@@ -68,18 +68,18 @@ export default function AddTripPage() {
     setError(null);
 
     if (!title || !country || !startDate || !endDate || !baseCurrency || !rateToJpy) {
-      setError("All fields are required.");
+      setError("すべての項目を入力してください。");
       return;
     }
 
     if (!isUpper3(baseCurrency)) {
-      setError("Base currency must be 3 uppercase letters.");
+      setError("基準通貨は3文字の大文字コードで入力してください。");
       return;
     }
 
     const parsedRate = Number(rateToJpy);
     if (!Number.isFinite(parsedRate) || parsedRate <= 0) {
-      setError("Rate to JPY must be a positive number.");
+      setError("JPY レートは正の数で入力してください。");
       return;
     }
 
@@ -95,7 +95,7 @@ export default function AddTripPage() {
       });
       navigate(`/trips/${trip.trip_id}`);
     } catch (err) {
-      setError((err as Error).message ?? "Failed to create trip");
+      setError((err as Error).message ?? "旅行の作成に失敗しました。");
     } finally {
       setSaving(false);
     }
@@ -106,20 +106,20 @@ export default function AddTripPage() {
       <div className="modal">
         <header className="modal__header">
           <div>
-            <div className="modal__title">New Trip</div>
-            <div className="modal__subtitle">Create a trip and invite friends.</div>
+            <div className="modal__title">旅行を作成</div>
+            <div className="modal__subtitle">新しい旅行を作成します。</div>
           </div>
           <Link className="modal__close" to="/">×</Link>
         </header>
 
         <form className="modal__form" onSubmit={onSubmit}>
           <label className="field">
-            <span>Title</span>
+            <span>タイトル</span>
             <input value={title} onChange={(e) => setTitle(e.target.value)} required />
           </label>
 
           <label className="field">
-            <span>Country</span>
+            <span>国</span>
             <select
               value={country}
               onChange={(e) => {
@@ -136,7 +136,7 @@ export default function AddTripPage() {
               required
             >
               <option value="" disabled>
-                Select country
+                国を選択
               </option>
               {COUNTRIES.map((item) => (
                 <option key={item.code} value={item.code}>
@@ -147,22 +147,22 @@ export default function AddTripPage() {
           </label>
 
           <label className="field">
-            <span>Start date</span>
+            <span>開始日</span>
             <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
           </label>
 
           <label className="field">
-            <span>End date</span>
+            <span>終了日</span>
             <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
           </label>
 
           <label className="field">
-            <span>Base currency</span>
+            <span>基準通貨</span>
             <input value={baseCurrency} readOnly />
           </label>
 
           <label className="field">
-            <span>Rate to JPY</span>
+            <span>JPY レート</span>
             <input
               type="number"
               step="0.01"
@@ -172,12 +172,12 @@ export default function AddTripPage() {
             />
           </label>
 
-          {rateLoading && <div className="status">Fetching rate...</div>}
+          {rateLoading && <div className="status">為替レートを取得中...</div>}
           {rateError && <div className="status status--error">{rateError}</div>}
           {error && <div className="status status--error">{error}</div>}
 
           <button className="primary" type="submit" disabled={saving}>
-            {saving ? "Saving..." : "Create Trip"}
+            {saving ? "保存中..." : "旅行を作成"}
           </button>
         </form>
       </div>

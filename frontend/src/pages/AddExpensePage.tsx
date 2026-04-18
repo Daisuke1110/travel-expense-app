@@ -14,6 +14,15 @@ const CATEGORIES = [
   "amusement",
 ];
 
+const CATEGORY_LABELS: Record<string, string> = {
+  food: "食費",
+  transport: "交通費",
+  hotel: "宿泊費",
+  other: "その他",
+  shopping: "買い物",
+  amusement: "娯楽",
+};
+
 function toUtcIso(datetimeLocal: string) {
   if (!datetimeLocal) return "";
   const date = new Date(datetimeLocal);
@@ -65,18 +74,18 @@ export default function AddExpensePage() {
 
     const parsed = Number(amount);
     if (!Number.isFinite(parsed) || parsed <= 0) {
-      setError("Amount must be a positive number.");
+      setError("金額は正の数で入力してください。");
       return;
     }
 
     const datetime = toUtcIso(datetimeLocal);
     if (!datetime) {
-      setError("Datetime is required.");
+      setError("日時を入力してください。");
       return;
     }
 
     if (!paidByUserId) {
-      setError("Paid by is required.");
+      setError("支払者を選択してください。");
       return;
     }
 
@@ -93,7 +102,7 @@ export default function AddExpensePage() {
       });
       navigate(`/trips/${tripId}`);
     } catch (err) {
-      setError((err as Error).message ?? "Failed to create expense");
+      setError((err as Error).message ?? "支出の作成に失敗しました。");
     } finally {
       setSaving(false);
     }
@@ -102,7 +111,7 @@ export default function AddExpensePage() {
   if (tripState.loading) {
     return (
       <div className="page">
-        <div className="status">Loading trip...</div>
+        <div className="status">旅行情報を読み込み中...</div>
       </div>
     );
   }
@@ -111,10 +120,10 @@ export default function AddExpensePage() {
     return (
       <div className="page">
         <div className="status status--error">
-          {tripState.error ?? "Trip not found"}
+          {tripState.error ?? "旅行が見つかりません。"}
         </div>
         <Link className="back-link" to="/">
-          Back to trips
+          旅行一覧へ戻る
         </Link>
       </div>
     );
@@ -125,7 +134,7 @@ export default function AddExpensePage() {
       <div className="modal">
         <header className="modal__header">
           <div>
-            <div className="modal__title">Add Expense</div>
+            <div className="modal__title">支出を追加</div>
             <div className="modal__subtitle">{tripState.data.title}</div>
           </div>
           <Link
@@ -138,7 +147,7 @@ export default function AddExpensePage() {
 
         <form className="modal__form" onSubmit={onSubmit}>
           <label className="field">
-            <span>Datetime (local)</span>
+            <span>日時</span>
             <input
               type="datetime-local"
               value={datetimeLocal}
@@ -148,7 +157,7 @@ export default function AddExpensePage() {
           </label>
 
           <label className="field">
-            <span>Amount</span>
+            <span>金額</span>
             <input
               type="number"
               inputMode="numeric"
@@ -161,12 +170,12 @@ export default function AddExpensePage() {
           </label>
 
           <label className="field">
-            <span>Currency</span>
+            <span>通貨</span>
             <input type="text" value={currency} disabled />
           </label>
 
           <label className="field">
-            <span>Paid by</span>
+            <span>支払者</span>
             <select
               value={paidByUserId}
               onChange={(event) => setPaidByUserId(event.target.value)}
@@ -174,34 +183,34 @@ export default function AddExpensePage() {
               required
             >
               {payerOptions.map((member) => (
-                <option key={member.name} value={member.user_id}>
-                  {member.name}
+                <option key={member.user_id} value={member.user_id}>
+                  {member.name ?? member.user_id}
                 </option>
               ))}
             </select>
           </label>
 
           <label className="field">
-            <span>Category</span>
+            <span>カテゴリ</span>
             <select
               value={category}
               onChange={(event) => setCategory(event.target.value)}
             >
               {CATEGORIES.map((item) => (
                 <option key={item} value={item}>
-                  {item}
+                  {CATEGORY_LABELS[item]}
                 </option>
               ))}
             </select>
           </label>
 
           <label className="field">
-            <span>Note</span>
+            <span>メモ</span>
             <textarea
               rows={3}
               value={note}
               onChange={(event) => setNote(event.target.value)}
-              placeholder="Optional note"
+              placeholder="任意のメモ"
             />
           </label>
 
@@ -215,7 +224,7 @@ export default function AddExpensePage() {
             type="submit"
             disabled={saving || payerOptions.length === 0}
           >
-            {saving ? "Saving..." : "Save"}
+            {saving ? "保存中..." : "保存"}
           </button>
         </form>
       </div>

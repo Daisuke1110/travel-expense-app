@@ -14,7 +14,7 @@ export function useTrips() {
         if (mounted) setData(res);
       })
       .catch((err) => {
-        if (mounted) setError(err.message ?? "Failed to load trips");
+        if (mounted) setError(err.message ?? "旅行の読み込みに失敗しました。");
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -27,5 +27,4 @@ export function useTrips() {
 
   return { data, error, loading };
 }
-
 
