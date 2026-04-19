@@ -1,4 +1,4 @@
-﻿import { type FormEvent, useState } from "react";
+﻿import { type FormEvent, useEffect, useState } from "react";
 import type { ExpenseItem, ExpenseUpdateRequest } from "../api/expenses";
 import type { TripMemberResponse } from "../api/trips";
 
@@ -65,6 +65,9 @@ export default function ExpenseItemCard({
   const [editing, setEditing] = useState(false);
   const [amount, setAmount] = useState(String(item.amount));
   const [paidByUserId, setPaidByUserId] = useState(item.paid_by_user_id);
+  const [participantUserIds, setParticipantUserIds] = useState(
+    item.participant_user_ids,
+  );
   const [category, setCategory] = useState(item.category ?? "other");
   const [note, setNote] = useState(item.note ?? "");
   const [datetimeLocal, setDatetimeLocal] = useState(() =>
@@ -76,9 +79,23 @@ export default function ExpenseItemCard({
   const resetForm = () => {
     setAmount(String(item.amount));
     setPaidByUserId(item.paid_by_user_id);
+    setParticipantUserIds(item.participant_user_ids);
     setCategory(item.category ?? "other");
     setNote(item.note ?? "");
     setDatetimeLocal(toLocalInput(item.datetime));
+  };
+
+  useEffect(() => {
+    if (editing) return;
+    resetForm();
+  }, [editing, item]);
+
+  const toggleParticipant = (memberUserId: string) => {
+    setParticipantUserIds((prev) =>
+      prev.includes(memberUserId)
+        ? prev.filter((userId) => userId !== memberUserId)
+        : [...prev, memberUserId],
+    );
   };
 
   const onSubmit = async (event: FormEvent) => {
@@ -100,12 +117,18 @@ export default function ExpenseItemCard({
       return;
     }
 
+    if (participantUserIds.length === 0) {
+      setError("対象者を1人以上選択してください。");
+      return;
+    }
+
     setSaving(true);
     setError(null);
     try {
       await onUpdate(item.expense_id, {
         amount: parsed,
         paid_by_user_id: paidByUserId,
+        participant_user_ids: participantUserIds,
         category,
         note: note || undefined,
         datetime,
@@ -208,6 +231,21 @@ export default function ExpenseItemCard({
               ))}
             </select>
           </label>
+          <fieldset className="field">
+            <span>対象者</span>
+            <div className="participant-list">
+              {members.map((member) => (
+                <label key={member.user_id} className="participant-list__item">
+                  <input
+                    type="checkbox"
+                    checked={participantUserIds.includes(member.user_id)}
+                    onChange={() => toggleParticipant(member.user_id)}
+                  />
+                  <span>{member.name ?? member.user_id}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
           <label className="field">
             <span>メモ</span>
             <textarea

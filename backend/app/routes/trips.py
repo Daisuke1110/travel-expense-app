@@ -62,6 +62,7 @@ class ExpenseItem(BaseModel):
     user_name: Optional[str] = None
     paid_by_user_id: str
     paid_by_name: Optional[str] = None
+    participant_user_ids: List[str]
     amount: float
     currency: str
     category: Optional[str] = None
@@ -110,6 +111,7 @@ class ExpenseCreateRequest(BaseModel):
     amount: int | float | str
     currency: str
     paid_by_user_id: Optional[str] = None
+    participant_user_ids: List[str]
     category: Optional[str] = None
     note: Optional[str] = None
     datetime: str
@@ -119,6 +121,7 @@ class ExpenseUpdateRequest(BaseModel):
     amount: int | float | str | None = None
     currency: str | None = None
     paid_by_user_id: Optional[str] = None
+    participant_user_ids: List[str] | None = None
     category: Optional[str] = None
     note: Optional[str] = None
     datetime: str | None = None
@@ -380,6 +383,38 @@ def _resolve_paid_by_user_id(
     _ensure_member_or_forbid(dynamodb, trip_members_table, payer_user_id, trip_id)
     return payer_user_id
 
+
+def _normalize_participant_user_ids(user_ids: List[str]) -> List[str]:
+    normalized: List[str] = []
+    seen: set[str] = set()
+    for user_id in user_ids:
+        value = str(user_id).strip()
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        normalized.append(value)
+    return normalized
+
+
+def _resolve_participant_user_ids(
+    dynamodb,
+    trip_members_table: str,
+    trip_id: str,
+    participant_user_ids: List[str],
+) -> List[str]:
+    normalized = _normalize_participant_user_ids(participant_user_ids)
+    if not normalized:
+        raise HTTPException(
+            status_code=400, detail="participant_user_ids must contain at least one user"
+        )
+
+    for participant_user_id in normalized:
+        _ensure_member_or_forbid(
+            dynamodb, trip_members_table, participant_user_id, trip_id
+        )
+
+    return normalized
+
 def _get_user_by_email(dynamodb, table_name: str, email: str) -> dict | None:
     normalized = email.strip().lower()
     response = dynamodb.Table(table_name).query(
@@ -609,6 +644,9 @@ def list_expenses(
 
         expenses: List[ExpenseItem] = []
         for item in items:
+            participant_user_ids = _normalize_participant_user_ids(
+                item.get("participant_user_ids") or [item.get("user_id", "")]
+            )
             expenses.append(  
                 ExpenseItem(  
                     expense_id=item.get("expense_id", ""),  
@@ -619,6 +657,7 @@ def list_expenses(
                     paid_by_name=name_map.get(  
                         item.get("paid_by_user_id", item.get("user_id", ""))  
                     ),  
+                    participant_user_ids=participant_user_ids,
                     amount=_as_float(item.get("amount", 0)),  
                     currency=item.get("currency", ""),  
                     category=item.get("category"),  
@@ -970,6 +1009,12 @@ def create_expense(
             req.paid_by_user_id,
             user_id,
         )
+        participant_user_ids = _resolve_participant_user_ids(
+            dynamodb,
+            tables["trip_members"],
+            trip_id,
+            req.participant_user_ids,
+        )
 
         expense_id = str(uuid.uuid4())
         datetime_expense_id = f"{datetime_value}#{expense_id}"
@@ -982,6 +1027,7 @@ def create_expense(
             "datetime": datetime_value,
             "user_id": user_id,
             "paid_by_user_id": paid_by_user_id,
+            "participant_user_ids": participant_user_ids,
             "amount": amount,
             "currency": req.currency,
             "category": req.category,
@@ -1004,6 +1050,7 @@ def create_expense(
             user_name=name_map.get(user_id),  
             paid_by_user_id=paid_by_user_id,  
             paid_by_name=name_map.get(paid_by_user_id),  
+            participant_user_ids=participant_user_ids,
             amount=_as_float(amount),
             currency=req.currency,  
             category=req.category,  
@@ -1061,6 +1108,13 @@ def update_expense(
                 req.paid_by_user_id,
                 user_id,
             )
+        if req.participant_user_ids is not None:
+            update_values["participant_user_ids"] = _resolve_participant_user_ids(
+                dynamodb,
+                tables["trip_members"],
+                trip_id,
+                req.participant_user_ids,
+            )
 
         new_datetime = None
         if req.datetime is not None:
@@ -1082,6 +1136,11 @@ def update_expense(
                 "paid_by_user_id": update_values.get(
                     "paid_by_user_id",
                     expense.get("paid_by_user_id", expense.get("user_id")),
+                ),
+                "participant_user_ids": update_values.get(
+                    "participant_user_ids",
+                    expense.get("participant_user_ids")
+                    or [expense.get("user_id", "")],
                 ),
                 "amount": update_values.get("amount", expense.get("amount")),
                 "currency": update_values.get("currency", expense.get("currency")),
@@ -1126,6 +1185,9 @@ def update_expense(
 
         updated_user_id = updated.get("user_id", "")  
         updated_paid_by_user_id = updated.get("paid_by_user_id", updated_user_id)
+        updated_participant_user_ids = _normalize_participant_user_ids(
+            updated.get("participant_user_ids") or [updated_user_id]
+        )
 
         name_map = _get_user_name_map(  
             dynamodb=dynamodb,  
@@ -1140,6 +1202,7 @@ def update_expense(
             user_name=name_map.get(updated_user_id),  
             paid_by_user_id=updated_paid_by_user_id,  
             paid_by_name=name_map.get(updated_paid_by_user_id),  
+            participant_user_ids=updated_participant_user_ids,
             amount=_as_float(updated.get("amount", 0)),  
             currency=updated.get("currency", ""),  
             category=updated.get("category"),

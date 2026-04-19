@@ -6,6 +6,7 @@ export type ExpenseItem = {
   user_id: string;
   paid_by_user_id: string;
   paid_by_name?: string | null;
+  participant_user_ids: string[];
   amount: number;
   currency: string;
   category?: string | null;
@@ -23,6 +24,7 @@ export type ExpenseCreateRequest = {
   amount: number;
   currency: string;
   paid_by_user_id?: string;
+  participant_user_ids: string[];
   category?: string;
   note?: string;
   datetime: string;
@@ -31,6 +33,7 @@ export type ExpenseCreateRequest = {
 export type ExpenseUpdateRequest = {
   amount?: number;
   paid_by_user_id?: string;
+  participant_user_ids?: string[];
   category?: string;
   note?: string;
   datetime?: string;

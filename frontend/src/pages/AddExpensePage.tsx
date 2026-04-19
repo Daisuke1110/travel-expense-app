@@ -40,6 +40,9 @@ export default function AddExpensePage() {
   const [category, setCategory] = useState("food");
   const [note, setNote] = useState("");
   const [paidByUserId, setPaidByUserId] = useState(currentUserId);
+  const [participantUserIds, setParticipantUserIds] = useState<string[]>(
+    currentUserId ? [currentUserId] : [],
+  );
   const [datetimeLocal, setDatetimeLocal] = useState(() => {
     const now = new Date();
     const offset = now.getTimezoneOffset() * 60000;
@@ -68,6 +71,33 @@ export default function AddExpensePage() {
     setPaidByUserId(hasCurrentUser ? currentUserId : payerOptions[0].user_id);
   }, [currentUserId, paidByUserId, payerOptions]);
 
+  useEffect(() => {
+    if (payerOptions.length === 0) return;
+
+    setParticipantUserIds((prev) => {
+      const validIds = prev.filter((userId) =>
+        payerOptions.some((member) => member.user_id === userId),
+      );
+
+      if (validIds.length > 0) {
+        return validIds;
+      }
+
+      const hasCurrentUser = payerOptions.some(
+        (member) => member.user_id === currentUserId,
+      );
+      return [hasCurrentUser ? currentUserId : payerOptions[0].user_id];
+    });
+  }, [currentUserId, payerOptions]);
+
+  const toggleParticipant = (memberUserId: string) => {
+    setParticipantUserIds((prev) =>
+      prev.includes(memberUserId)
+        ? prev.filter((userId) => userId !== memberUserId)
+        : [...prev, memberUserId],
+    );
+  };
+
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!tripId || !currency) return;
@@ -89,6 +119,11 @@ export default function AddExpensePage() {
       return;
     }
 
+    if (participantUserIds.length === 0) {
+      setError("対象者を1人以上選択してください。");
+      return;
+    }
+
     setSaving(true);
     setError(null);
     try {
@@ -96,6 +131,7 @@ export default function AddExpensePage() {
         amount: parsed,
         currency,
         paid_by_user_id: paidByUserId,
+        participant_user_ids: participantUserIds,
         category,
         note: note || undefined,
         datetime,
@@ -203,6 +239,22 @@ export default function AddExpensePage() {
               ))}
             </select>
           </label>
+
+          <fieldset className="field">
+            <span>対象者</span>
+            <div className="participant-list">
+              {payerOptions.map((member) => (
+                <label key={member.user_id} className="participant-list__item">
+                  <input
+                    type="checkbox"
+                    checked={participantUserIds.includes(member.user_id)}
+                    onChange={() => toggleParticipant(member.user_id)}
+                  />
+                  <span>{member.name ?? member.user_id}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
 
           <label className="field">
             <span>メモ</span>
