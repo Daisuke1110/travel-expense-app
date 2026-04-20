@@ -8,6 +8,7 @@ import { useExpenses } from "../hooks/useExpenses";
 import { useMembers } from "../hooks/useMembers";
 import { useTrip } from "../hooks/useTrip";
 import { formatJapaneseDate } from "../utils/date";
+import { calculateExpenseShareSummary } from "../utils/expenseShare";
 
 export default function TripDetailPage() {
   const { tripId } = useParams();
@@ -37,6 +38,31 @@ export default function TripDetailPage() {
     const totalYen = Math.round(totalAmount * rate);
     return { totalAmount, totalYen };
   }, [expenseState.data, tripState.data]);
+
+  const currentUserId = getCurrentUserId();
+
+  const settlementTotals = useMemo(() => {
+    return expenseState.data.reduce(
+      (sum, item) => {
+        const shareSummary = calculateExpenseShareSummary(
+          currentUserId,
+          item.amount,
+          item.paid_by_user_id,
+          item.participant_user_ids,
+        );
+
+        sum.myShareTotal += shareSummary.myShareAmount;
+        sum.myAdvanceTotal += shareSummary.myAdvanceAmount;
+        sum.coveredByOthersTotal += shareSummary.coveredByOthersAmount;
+        return sum;
+      },
+      {
+        myShareTotal: 0,
+        myAdvanceTotal: 0,
+        coveredByOthersTotal: 0,
+      },
+    );
+  }, [currentUserId, expenseState.data]);
 
   const memberNameById = useMemo(() => {
     return new Map(
@@ -68,7 +94,6 @@ export default function TripDetailPage() {
       .sort((a, b) => b.totalAmount - a.totalAmount);
   }, [expenseState.data, memberState.data, tripState.data]);
 
-  const currentUserId = getCurrentUserId();
   const canDelete =
     !!tripState.data?.owner_id && tripState.data.owner_id === currentUserId;
   const canEditRate = canDelete;
@@ -203,6 +228,9 @@ export default function TripDetailPage() {
         totalAmount={totals.totalAmount}
         totalYen={totals.totalYen}
         rateToJpy={trip.rate_to_jpy}
+        myShareTotal={settlementTotals.myShareTotal}
+        myAdvanceTotal={settlementTotals.myAdvanceTotal}
+        coveredByOthersTotal={settlementTotals.coveredByOthersTotal}
       />
 
       <section className="paid-summary">
@@ -392,6 +420,7 @@ export default function TripDetailPage() {
         <div className="expense-list">
           {expenseState.data.map((item) => (
             <ExpenseItemCard
+              currentUserId={currentUserId}
               key={item.expense_id}
               item={item}
               members={memberState.data}

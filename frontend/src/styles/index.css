@@ -370,6 +370,21 @@ a {
   color: var(--ink);
 }
 
+.expense-card__share {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.expense-card__share-item {
+  font-size: 12px;
+  color: var(--muted);
+  background: #fff7ec;
+  border: 1px solid var(--stroke);
+  border-radius: 999px;
+  padding: 6px 10px;
+}
+
 .expense-card__form {
   display: grid;
   gap: 12px;
@@ -441,7 +456,15 @@ a {
   color: var(--muted);
 }
 
-.field input,
+.field.fieldset,
+.field:where(fieldset) {
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+}
+
+.field input:not([type="checkbox"]),
 .field select,
 .field textarea {
   font-family: inherit;
@@ -451,6 +474,33 @@ a {
   border: 1px solid var(--stroke);
   width: 100%;
   appearance: none;
+}
+
+.participant-list {
+  display: grid;
+  gap: 8px;
+}
+
+.participant-list__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  background: #fffdf8;
+  color: var(--ink);
+}
+
+.participant-list__item input {
+  width: auto;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 auto;
+}
+
+.participant-list__item span {
+  word-break: break-word;
 }
 
 .field input:disabled {

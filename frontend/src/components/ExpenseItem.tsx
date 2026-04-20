@@ -1,8 +1,17 @@
 ﻿import { type FormEvent, useEffect, useState } from "react";
 import type { ExpenseItem, ExpenseUpdateRequest } from "../api/expenses";
 import type { TripMemberResponse } from "../api/trips";
+import {
+  classifyExpense,
+  getExpenseKindLabel,
+} from "../utils/expenseClassification";
+import {
+  calculateExpenseShareSummary,
+  formatAmount,
+} from "../utils/expenseShare";
 
 type Props = {
+  currentUserId: string;
   item: ExpenseItem;
   members: TripMemberResponse[];
   rateToJpy: number;
@@ -55,6 +64,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 export default function ExpenseItemCard({
+  currentUserId,
   item,
   members,
   rateToJpy,
@@ -62,6 +72,18 @@ export default function ExpenseItemCard({
   onUpdate,
 }: Props) {
   const yen = item.amount * rateToJpy;
+  const expenseKind = classifyExpense(
+    currentUserId,
+    item.paid_by_user_id,
+    item.participant_user_ids,
+  );
+  const expenseKindLabel = getExpenseKindLabel(expenseKind);
+  const shareSummary = calculateExpenseShareSummary(
+    currentUserId,
+    item.amount,
+    item.paid_by_user_id,
+    item.participant_user_ids,
+  );
   const [editing, setEditing] = useState(false);
   const [amount, setAmount] = useState(String(item.amount));
   const [paidByUserId, setPaidByUserId] = useState(item.paid_by_user_id);
@@ -177,7 +199,32 @@ export default function ExpenseItemCard({
         <span className="chip">
           {CATEGORY_LABELS[item.category ?? "other"] ?? (item.category ?? "other")}
         </span>
+        <span className="chip">{expenseKindLabel}</span>
         <span className="muted">{formatDate(item.datetime)}</span>
+      </div>
+      <div className="expense-card__share">
+        <span className="expense-card__share-item">
+          対象者 {shareSummary.participantCount} 人
+        </span>
+        <span className="expense-card__share-item">
+          1人あたり {formatAmount(shareSummary.perPersonAmount)} {item.currency}
+        </span>
+        {shareSummary.myShareAmount > 0 && (
+          <span className="expense-card__share-item">
+            自分負担 {formatAmount(shareSummary.myShareAmount)} {item.currency}
+          </span>
+        )}
+        {shareSummary.myAdvanceAmount > 0 && (
+          <span className="expense-card__share-item">
+            立替中 {formatAmount(shareSummary.myAdvanceAmount)} {item.currency}
+          </span>
+        )}
+        {shareSummary.coveredByOthersAmount > 0 && (
+          <span className="expense-card__share-item">
+            立て替えてもらい中{" "}
+            {formatAmount(shareSummary.coveredByOthersAmount)} {item.currency}
+          </span>
+        )}
       </div>
       {item.note && <div className="expense-card__note">{item.note}</div>}
 
